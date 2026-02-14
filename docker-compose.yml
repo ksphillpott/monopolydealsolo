@@ -1,0 +1,8 @@
+version: "3"
+services:
+  monopolydealsolo:
+    build: .
+    container_name: monopolydealsolo
+    ports:
+      - "3005:80"
+    restart: unless-stopped

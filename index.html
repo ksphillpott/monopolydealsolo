@@ -1,0 +1,5317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<title>Monopoly Deal</title>
+<style>
+:root{--bg:#1a1a2e;--bg2:#16213e;--surface:#0f3460;--accent:#e94560;--gold:#f5c518;--text:#eee;--text-dim:#8899aa;--green:#2ecc71;--red:#e74c3c}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;overflow-x:hidden;user-select:none;-webkit-user-select:none}
+.screen{display:none;min-height:100vh;min-height:100dvh}
+.screen.active{display:flex;flex-direction:column}
+#setup-screen{align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at center,#1a3a6e 0%,#1a1a2e 70%)}
+.setup-title{font-size:2rem;font-weight:900;color:var(--gold);text-align:center;text-shadow:0 0 30px rgba(245,197,24,0.3);margin-bottom:8px;letter-spacing:2px}
+.setup-subtitle{color:var(--text-dim);text-align:center;margin-bottom:30px;font-size:0.9rem}
+.setup-box{background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:380px}
+.setup-label{font-weight:600;margin-bottom:8px;font-size:0.85rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px}
+.player-count-row{display:flex;gap:8px;margin-bottom:20px}
+.count-btn{flex:1;padding:12px;border:2px solid #334;border-radius:10px;background:var(--bg2);color:var(--text);font-size:1.1rem;font-weight:700;cursor:pointer;transition:all 0.2s}
+.count-btn.selected{border-color:var(--gold);background:rgba(245,197,24,0.15);color:var(--gold)}
+.diff-section{margin-bottom:20px}
+.diff-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 12px;background:var(--bg2);border-radius:8px}
+.diff-name{flex:1;font-weight:500;font-size:0.9rem}
+.diff-select{background:var(--bg);color:var(--text);border:1px solid #445;border-radius:6px;padding:6px 10px;font-size:0.8rem}
+.start-btn{width:100%;padding:16px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-size:1.1rem;font-weight:900;cursor:pointer;transition:transform 0.15s;margin-top:10px;letter-spacing:1px}
+.start-btn:active{transform:scale(0.97)}
+#game-screen{height:100vh;height:100dvh;overflow:hidden}
+.top-bar{display:flex;align-items:center;padding:6px 10px;background:var(--bg2);border-bottom:1px solid #223;gap:5px;flex-shrink:0}
+.top-bar-title{font-weight:900;font-size:0.7rem;color:var(--gold);margin-right:auto;letter-spacing:1px}
+.deck-count,.turn-indicator,.plays-left{font-size:0.65rem;padding:2px 6px;border-radius:5px}
+.deck-count{color:var(--text-dim);background:var(--bg)}
+.turn-indicator{font-weight:700;color:var(--green);background:rgba(46,204,113,0.15)}
+.plays-left{color:var(--gold);background:rgba(245,197,24,0.15)}
+.log-toggle{font-size:0.65rem;background:var(--bg);border:1px solid #334;color:var(--text-dim);padding:2px 6px;border-radius:5px;cursor:pointer}
+.log-area{position:fixed;top:36px;right:8px;width:220px;max-height:200px;overflow-y:auto;background:rgba(0,0,0,0.9);border-radius:8px;padding:8px;font-size:0.6rem;color:var(--text-dim);z-index:50;display:none;scrollbar-width:none}
+.log-area.visible{display:block}
+.log-area::-webkit-scrollbar{display:none}
+.move-history-inline{background:rgba(0,0,0,0.3);border-radius:6px;padding:6px;max-height:140px;overflow-y:auto;scrollbar-width:thin}
+.move-history-inline::-webkit-scrollbar{width:4px}
+.move-history-inline::-webkit-scrollbar-track{background:rgba(0,0,0,0.2)}
+.move-history-inline::-webkit-scrollbar-thumb{background:rgba(255,215,0,0.3);border-radius:2px}
+.move-entry-inline{padding:3px 6px;margin:2px 0;background:rgba(255,255,255,0.05);border-radius:3px;border-left:2px solid var(--accent);font-size:0.65rem}
+.move-entry-inline.player{border-left-color:var(--gold)}
+.move-entry-inline.ai{border-left-color:var(--red)}
+.log-entry{padding:2px 0;border-bottom:1px solid #222}
+.opponents-area{display:flex;gap:4px;padding:5px 8px;overflow-x:auto;flex-shrink:0;background:rgba(0,0,0,0.2);scrollbar-width:none}
+.opponents-area::-webkit-scrollbar{display:none}
+.opponent-panel{min-width:110px;max-width:150px;flex-shrink:0;background:var(--surface);border-radius:8px;padding:6px;cursor:pointer;border:2px solid transparent;transition:border-color 0.2s}
+.opponent-panel.current-turn{border-color:var(--green)}
+.opp-name{font-size:0.65rem;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.opp-diff{font-size:0.5rem;color:var(--text-dim);padding:1px 3px;background:var(--bg);border-radius:3px}
+.opp-stats{display:flex;gap:5px;font-size:0.55rem;color:var(--text-dim);margin-bottom:3px}
+.opp-sets{display:flex;gap:2px;flex-wrap:wrap}
+.opp-set-dot{width:10px;height:10px;border-radius:3px;border:1px solid rgba(255,255,255,0.2)}
+.opp-set-dot.complete{box-shadow:0 0 4px rgba(255,255,255,0.5)}
+.player-board{flex:1;overflow-y:auto;padding:8px;scrollbar-width:none}
+.player-board::-webkit-scrollbar{display:none}
+.board-section-title{font-size:0.6rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin:6px 0 4px}
+.property-sets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.property-set{display:flex;flex-direction:column;gap:0;position:relative}
+.set-label{font-size:0.45rem;font-weight:700;text-align:center;margin-bottom:2px}
+.bank-area{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:8px}
+.card{width:70px;height:98px;border-radius:6px;border:2px solid #000;background:var(--bg2);position:relative;flex-shrink:0;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 2px 4px rgba(0,0,0,0.3);font-size:0.5rem;overflow:hidden;display:flex;flex-direction:column}
+.card:active{transform:scale(0.95)}
+.card:hover{transform:translateY(-4px);box-shadow:0 4px 8px rgba(0,0,0,0.4)}
+.card.selected{border-color:var(--gold);box-shadow:0 0 10px rgba(245,197,24,0.5);transform:translateY(-6px)}
+
+/* Money Cards */
+.card-money{background:linear-gradient(135deg, #2E8B57 0%, #90EE90 100%)}
+.card-value-corner{position:absolute;top:1px;left:1px;background:rgba(0,0,0,0.8);color:#fff;font-size:0.35rem;font-weight:bold;padding:0px 2px;border-radius:1px;z-index:10;line-height:1.2}
+.card-money .card-value-corner{display:none}
+.card-center-text{flex:1;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fff;text-shadow:2px 2px 0 #000;font-weight:bold}
+
+/* Property Cards */
+.card-property{background:#fff;color:#000}
+.card-property .card-value-corner{top:1px;left:1px;background:rgba(0,0,0,0.8);color:#fff;font-size:0.35rem;padding:0px 2px}
+.card-color-bar{height:28px;display:flex;align-items:center;justify-content:center;font-size:0.45rem;font-weight:bold;color:#fff;text-shadow:1px 1px 1px rgba(0,0,0,0.8);border-bottom:2px solid #000;position:relative}
+.card-color-bar-wild{background:linear-gradient(90deg, #87CEEB 0%, #87CEEB 50%, #8B4513 50%, #8B4513 100%)}
+.card-color-bar-multi{background:linear-gradient(90deg, #8B4513 0%, #87CEEB 14%, #FF69B4 28%, #FFA500 42%, #DC143C 56%, #FFD700 70%, #228B22 84%, #00008B 100%)}
+.card-property-name{padding:8px 4px;text-align:center;font-size:0.55rem;font-weight:bold;flex:1;display:flex;align-items:center;justify-content:center;line-height:1.1}
+.card-rent-box{background:#f0f0f0;border-top:2px solid #000;padding:4px;font-size:0.45rem;text-align:center;line-height:1.2}
+
+/* Action Cards */
+.card-action{background:linear-gradient(135deg, var(--red) 0%, #FF6B6B 100%);color:#fff}
+.card-action .card-value-corner{top:1px;left:1px;background:rgba(255,255,255,0.9);color:#000;font-size:0.35rem;padding:0px 2px}
+.card-action-title{padding:8px 4px;text-align:center;font-size:0.6rem;font-weight:bold;border-bottom:2px solid rgba(0,0,0,0.3)}
+.card-action-desc{padding:6px 4px;text-align:center;font-size:0.45rem;line-height:1.3;flex:1;display:flex;align-items:center;justify-content:center}
+
+.card img{width:100%;height:100%;object-fit:cover;pointer-events:none}
+.card-stacked{margin-top:-72px}
+.card-stacked:first-child{margin-top:0}
+.card-fallback{background:linear-gradient(135deg,#444,#666);color:#fff;font-size:0.5rem;padding:5px}
+.card-value-badge{position:absolute;top:2px;left:2px;font-size:0.5rem;background:rgba(0,0,0,0.7);color:#fff;padding:2px 4px;border-radius:3px;z-index:2;font-weight:900}
+.card-name-badge{position:absolute;bottom:2px;left:0;right:0;font-size:0.45rem;background:rgba(0,0,0,0.75);color:#fff;padding:2px 3px;text-align:center;z-index:2;font-weight:700}
+.wild-indicator{position:absolute;top:2px;right:2px;display:flex;gap:1px;z-index:2}
+.wild-color-dot{width:8px;height:8px;border-radius:50%;border:1px solid rgba(255,255,255,0.8);box-shadow:0 0 3px rgba(0,0,0,0.5)}
+.card.selected{border:3px solid var(--gold);box-shadow:0 0 15px rgba(245,197,24,0.6);transform:scale(1.05)}
+.payment-selected{outline:3px solid var(--gold);outline-offset:2px;box-shadow:0 0 15px rgba(245,197,24,0.8);border-radius:8px}
+.tooltip-box{background:#1a1a2e;border:2px solid var(--accent);border-radius:12px;padding:20px;max-width:300px;font-size:0.85rem;line-height:1.6;color:var(--text);text-align:center;white-space:pre-line;box-shadow:0 8px 24px rgba(0,0,0,0.6)}
+.hand-area{flex-shrink:0;background:var(--bg2);border-top:2px solid var(--accent);padding:6px 8px 10px}
+.hand-label{font-size:0.6rem;color:var(--text-dim);margin-bottom:4px;display:flex;justify-content:space-between}
+.hand-cards{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.hand-cards::-webkit-scrollbar{display:none}
+.action-bar{display:flex;gap:5px;padding:5px 8px;flex-shrink:0;background:var(--bg);flex-wrap:wrap;justify-content:center}
+.action-btn{padding:7px 12px;border:none;border-radius:7px;font-size:0.7rem;font-weight:700;cursor:pointer;transition:all 0.15s}
+.action-btn:disabled{opacity:0.3;pointer-events:none}
+.action-btn:active{transform:scale(0.95)}
+.btn-play{background:var(--green);color:#fff}
+.btn-bank{background:var(--gold);color:#1a1a2e}
+.btn-end{background:var(--accent);color:#fff}
+.btn-cancel{background:#555;color:#fff}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.active{display:flex}
+.modal{background:var(--surface);border-radius:16px;padding:20px;max-width:360px;width:100%;max-height:80vh;overflow-y:auto}
+.modal-title{font-weight:900;font-size:0.95rem;color:var(--gold);margin-bottom:10px}
+.modal-text{font-size:0.8rem;color:var(--text-dim);margin-bottom:10px;line-height:1.5}
+.modal-btns{display:flex;gap:6px;flex-wrap:wrap}
+.modal-btn{flex:1;padding:9px;border:none;border-radius:8px;font-weight:700;font-size:0.75rem;cursor:pointer;min-width:70px}
+.opp-detail-sets{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.opp-detail-set-row{display:flex;gap:3px;flex-wrap:wrap;align-items:flex-end}
+.opp-detail-bank{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:10px}
+.toast{position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 20px;border-radius:10px;font-size:0.8rem;font-weight:700;z-index:200;animation:toastIn 0.3s,toastOut 0.3s 2s forwards;pointer-events:none}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes toastOut{to{opacity:0;transform:translateX(-50%) translateY(-20px)}}
+#winner-screen{align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at center,#1a3a6e 0%,#1a1a2e 70%);text-align:center}
+.winner-title{font-size:2.5rem;font-weight:900;color:var(--gold);text-shadow:0 0 40px rgba(245,197,24,0.4);margin-bottom:12px}
+.winner-name{font-size:1.3rem;font-weight:700;margin-bottom:30px}
+</style>
+</head>
+<body>
+<div class="screen active" id="setup-screen">
+<h1 class="setup-title">MONOPOLY DEAL</h1>
+<p class="setup-subtitle">Card game for 2-5 players</p>
+<div class="setup-box">
+<div class="setup-label">Number of Players</div>
+<div class="player-count-row">
+<button class="count-btn" onclick="selectPlayers(2)">2</button>
+<button class="count-btn selected" onclick="selectPlayers(3)">3</button>
+<button class="count-btn" onclick="selectPlayers(4)">4</button>
+<button class="count-btn" onclick="selectPlayers(5)">5</button>
+</div>
+<div class="diff-section">
+<div class="setup-label">AI Difficulty</div>
+<div id="diff-rows"></div>
+</div>
+<button class="start-btn" onclick="startGame()">START GAME</button>
+</div>
+</div>
+
+<div class="screen" id="game-screen">
+<div class="top-bar">
+<span class="top-bar-title">MONOPOLY DEAL</span>
+<span class="deck-count" id="deck-count">Deck: 0</span>
+<span class="turn-indicator" id="turn-indicator">Your Turn</span>
+<span class="plays-left" id="plays-left">Plays: 3</span>
+<button class="log-toggle" onclick="toggleLog()">Log</button>
+</div>
+<div class="log-area" id="log-area"></div>
+<div class="opponents-area" id="opponents-area"></div>
+<div class="player-board" id="player-board"></div>
+<div class="hand-area">
+<div class="hand-label"><span id="hand-count">0 cards</span></div>
+<div class="hand-cards" id="hand-cards"></div>
+</div>
+<div class="action-bar" id="action-bar"></div>
+</div>
+
+<div class="screen" id="winner-screen">
+<h1 class="winner-title">🏆 WINNER! 🏆</h1>
+<p class="winner-name" id="winner-name">Player Name</p>
+<button class="start-btn" onclick="location.reload()">Play Again</button>
+</div>
+
+<div class="modal-overlay" id="modal-overlay"><div class="modal" id="modal"></div></div>
+
+<script>
+// CARD IMAGES (empty for now - can be filled with actual image URLs)
+var CARD_IMAGES = {};
+
+// PROPERTY SET DEFINITIONS
+var PS = {
+  brown: {name:"Brown",color:"#8B4513",size:2},
+  lightblue: {name:"Lt Blue",color:"#87CEEB",size:3},
+  pink: {name:"Pink",color:"#FF69B4",size:3},
+  orange: {name:"Orange",color:"#FFA500",size:3},
+  red: {name:"Red",color:"#DC143C",size:3},
+  yellow: {name:"Yellow",color:"#FFD700",size:3},
+  green: {name:"Green",color:"#228B22",size:3},
+  darkblue: {name:"Dk Blue",color:"#00008B",size:2},
+  railroad: {name:"Railroad",color:"#333",size:4},
+  utility: {name:"Utility",color:"#4169E1",size:2}
+};
+
+// RENT VALUES [count-1 as index]
+var RENT_VALUES = {
+  brown: [1,2],
+  lightblue: [1,2,3],
+  pink: [1,2,4],
+  orange: [1,3,5],
+  red: [2,3,6],
+  yellow: [2,4,6],
+  green: [2,4,7],
+  darkblue: [3,8],
+  railroad: [1,2,3,4],
+  utility: [1,2]
+};
+
+// CARD DEFINITIONS
+var CARDS = [
+  // Money cards
+  {type:"money",value:1,name:"$1M"},
+  {type:"money",value:1,name:"$1M"},
+  {type:"money",value:1,name:"$1M"},
+  {type:"money",value:1,name:"$1M"},
+  {type:"money",value:1,name:"$1M"},
+  {type:"money",value:1,name:"$1M"},
+  {type:"money",value:2,name:"$2M"},
+  {type:"money",value:2,name:"$2M"},
+  {type:"money",value:2,name:"$2M"},
+  {type:"money",value:2,name:"$2M"},
+  {type:"money",value:2,name:"$2M"},
+  {type:"money",value:3,name:"$3M"},
+  {type:"money",value:3,name:"$3M"},
+  {type:"money",value:3,name:"$3M"},
+  {type:"money",value:4,name:"$4M"},
+  {type:"money",value:4,name:"$4M"},
+  {type:"money",value:4,name:"$4M"},
+  {type:"money",value:5,name:"$5M"},
+  {type:"money",value:5,name:"$5M"},
+  {type:"money",value:10,name:"$10M"},
+  
+  // Brown properties
+  {type:"property",colors:["brown"],value:1,name:"Mediterranean"},
+  {type:"property",colors:["brown"],value:1,name:"Baltic"},
+  
+  // Light Blue properties
+  {type:"property",colors:["lightblue"],value:1,name:"Oriental"},
+  {type:"property",colors:["lightblue"],value:1,name:"Vermont"},
+  {type:"property",colors:["lightblue"],value:1,name:"Connecticut"},
+  
+  // Pink properties
+  {type:"property",colors:["pink"],value:2,name:"St. Charles"},
+  {type:"property",colors:["pink"],value:2,name:"States"},
+  {type:"property",colors:["pink"],value:2,name:"Virginia"},
+  
+  // Orange properties
+  {type:"property",colors:["orange"],value:2,name:"St. James"},
+  {type:"property",colors:["orange"],value:2,name:"Tennessee"},
+  {type:"property",colors:["orange"],value:2,name:"New York"},
+  
+  // Red properties
+  {type:"property",colors:["red"],value:3,name:"Kentucky"},
+  {type:"property",colors:["red"],value:3,name:"Indiana"},
+  {type:"property",colors:["red"],value:3,name:"Illinois"},
+  
+  // Yellow properties
+  {type:"property",colors:["yellow"],value:3,name:"Atlantic"},
+  {type:"property",colors:["yellow"],value:3,name:"Ventnor"},
+  {type:"property",colors:["yellow"],value:3,name:"Marvin"},
+  
+  // Green properties
+  {type:"property",colors:["green"],value:4,name:"Pacific"},
+  {type:"property",colors:["green"],value:4,name:"N. Carolina"},
+  {type:"property",colors:["green"],value:4,name:"Pennsylvania"},
+  
+  // Dark Blue properties
+  {type:"property",colors:["darkblue"],value:4,name:"Park Place"},
+  {type:"property",colors:["darkblue"],value:4,name:"Boardwalk"},
+  
+  // Railroads
+  {type:"property",colors:["railroad"],value:2,name:"Reading RR"},
+  {type:"property",colors:["railroad"],value:2,name:"Pennsylvania RR"},
+  {type:"property",colors:["railroad"],value:2,name:"B&O RR"},
+  {type:"property",colors:["railroad"],value:2,name:"Short Line"},
+  
+  // Utilities
+  {type:"property",colors:["utility"],value:2,name:"Electric Co."},
+  {type:"property",colors:["utility"],value:2,name:"Water Works"},
+  
+  // Wild properties
+  {type:"property",colors:["lightblue","railroad"],value:4,name:"Wild LB/RR"},
+  {type:"property",colors:["pink","orange"],value:2,name:"Wild P/O"},
+  {type:"property",colors:["pink","orange"],value:2,name:"Wild P/O"},
+  {type:"property",colors:["red","yellow"],value:3,name:"Wild R/Y"},
+  {type:"property",colors:["red","yellow"],value:3,name:"Wild R/Y"},
+  {type:"property",colors:["green","railroad"],value:4,name:"Wild G/RR"},
+  {type:"property",colors:["darkblue","green"],value:4,name:"Wild DB/G"},
+  {type:"property",colors:["lightblue","brown"],value:1,name:"Wild LB/Br"},
+  {type:"property",colors:["railroad","utility"],value:2,name:"Wild RR/U"},
+  
+  // Multicolor wild properties (no monetary value, can be any color)
+  {type:"property",colors:["brown","lightblue","pink","orange","red","yellow","green","darkblue","railroad","utility"],value:0,name:"Wild All Colors"},
+  {type:"property",colors:["brown","lightblue","pink","orange","red","yellow","green","darkblue","railroad","utility"],value:0,name:"Wild All Colors"},
+  
+  // Action cards
+  {type:"action",action:"dealbreaker",value:5,name:"Deal Breaker"},
+  {type:"action",action:"dealbreaker",value:5,name:"Deal Breaker"},
+  {type:"action",action:"sly",value:3,name:"Sly Deal"},
+  {type:"action",action:"sly",value:3,name:"Sly Deal"},
+  {type:"action",action:"sly",value:3,name:"Sly Deal"},
+  {type:"action",action:"forced",value:3,name:"Forced Deal"},
+  {type:"action",action:"forced",value:3,name:"Forced Deal"},
+  {type:"action",action:"forced",value:3,name:"Forced Deal"},
+  {type:"action",action:"debt",value:3,name:"Debt Collector"},
+  {type:"action",action:"debt",value:3,name:"Debt Collector"},
+  {type:"action",action:"debt",value:3,name:"Debt Collector"},
+  {type:"action",action:"birthday",value:2,name:"Birthday"},
+  {type:"action",action:"birthday",value:2,name:"Birthday"},
+  {type:"action",action:"birthday",value:2,name:"Birthday"},
+  {type:"action",action:"rent",colors:["brown","lightblue"],value:1,name:"Rent: Brown/Lt Blue"},
+  {type:"action",action:"rent",colors:["brown","lightblue"],value:1,name:"Rent: Brown/Lt Blue"},
+  {type:"action",action:"rent",colors:["pink","orange"],value:1,name:"Rent: Pink/Orange"},
+  {type:"action",action:"rent",colors:["pink","orange"],value:1,name:"Rent: Pink/Orange"},
+  {type:"action",action:"rent",colors:["red","yellow"],value:1,name:"Rent: Red/Yellow"},
+  {type:"action",action:"rent",colors:["red","yellow"],value:1,name:"Rent: Red/Yellow"},
+  {type:"action",action:"rent",colors:["green","darkblue"],value:1,name:"Rent: Green/Dk Blue"},
+  {type:"action",action:"rent",colors:["green","darkblue"],value:1,name:"Rent: Green/Dk Blue"},
+  {type:"action",action:"rent",colors:["railroad","utility"],value:1,name:"Rent: Railroad/Utility"},
+  {type:"action",action:"rent",colors:["railroad","utility"],value:1,name:"Rent: Railroad/Utility"},
+  {type:"action",action:"wildrent",value:3,name:"Wild Rent (ANY Color)"},
+  {type:"action",action:"wildrent",value:3,name:"Wild Rent (ANY Color)"},
+  {type:"action",action:"wildrent",value:3,name:"Wild Rent (ANY Color)"},
+  {type:"action",action:"house",value:3,name:"House"},
+  {type:"action",action:"house",value:3,name:"House"},
+  {type:"action",action:"house",value:3,name:"House"},
+  {type:"action",action:"hotel",value:4,name:"Hotel"},
+  {type:"action",action:"hotel",value:4,name:"Hotel"},
+  {type:"action",action:"hotel",value:4,name:"Hotel"},
+  {type:"action",action:"justno",value:4,name:"Just Say No"},
+  {type:"action",action:"justno",value:4,name:"Just Say No"},
+  {type:"action",action:"justno",value:4,name:"Just Say No"},
+  {type:"action",action:"double",value:1,name:"Double Rent"},
+  {type:"action",action:"double",value:1,name:"Double Rent"},
+  {type:"action",action:"passgo",value:1,name:"Pass Go"},
+  {type:"action",action:"passgo",value:1,name:"Pass Go"},
+  {type:"action",action:"passgo",value:1,name:"Pass Go"},
+  {type:"action",action:"passgo",value:1,name:"Pass Go"},
+  {type:"action",action:"passgo",value:1,name:"Pass Go"},
+  {type:"action",action:"passgo",value:1,name:"Pass Go"},
+  {type:"action",action:"passgo",value:1,name:"Pass Go"},
+  {type:"action",action:"passgo",value:1,name:"Pass Go"},
+  {type:"action",action:"passgo",value:1,name:"Pass Go"},
+  {type:"action",action:"passgo",value:1,name:"Pass Go"}
+];
+
+var G = null;
+var SETUP = {players:3,diffs:[]};
+var TOOLTIP_TIMER = null;
+
+// Global error handler
+window.onerror = function(msg, url, line, col, error){
+  console.error('Global error:', msg, 'at line', line);
+  toast('An error occurred. Check console for details.');
+  return false; // Let default handler run too
+};
+
+function getCardTooltip(card){
+  var p = G.players[0];
+  
+  if(card.action === 'rent' || card.action === 'wildrent'){
+    var colors = card.action === 'wildrent' ? Object.keys(PS) : card.colors;
+    var tooltips = [];
+    
+    for(var i=0; i<colors.length; i++){
+      var c = colors[i];
+      var rent = calculateRent(p, c);
+      if(rent > 0){
+        tooltips.push(PS[c].name + ': $' + rent + 'M');
+      }
+    }
+    
+    if(tooltips.length === 0){
+      return 'Rent Card - You need properties to charge rent';
+    }
+    return 'Rent Card - Charge:\n' + tooltips.join('\n');
+  }
+  
+  if(card.action === 'double'){
+    if(G.lastPlayedRent && G.lastRentAmount){
+      return 'Double the Rent\nDoubles your last rent\nLast rent: $'+G.lastRentAmount+'M\nDouble: $'+(G.lastRentAmount*2)+'M total';
+    }
+    return 'Double the Rent\nMust play AFTER a rent card\n(Play rent first, then this)';
+  }
+  
+  if(card.action === 'sly'){
+    return 'Sly Deal\nSteal 1 property from opponent\n(Cannot steal from complete sets)';
+  }
+  
+  if(card.action === 'forced'){
+    return 'Forced Deal\nSwap 1 of your properties\nfor 1 of opponent\'s properties\n(Cannot take from complete sets)';
+  }
+  
+  if(card.action === 'dealbreaker'){
+    return 'Deal Breaker\nSteal a COMPLETE property set\nfrom any opponent\n(Including houses/hotels!)';
+  }
+  
+  if(card.action === 'debt'){
+    return 'Debt Collector\nCharge $5M from one opponent';
+  }
+  
+  if(card.action === 'birthday'){
+    return 'It\'s My Birthday\nAll opponents pay you $2M each';
+  }
+  
+  if(card.action === 'house'){
+    return 'House\nAdd to a complete set\n(Not railroads/utilities)\nAdds +$3M to rent';
+  }
+  
+  if(card.action === 'hotel'){
+    return 'Hotel\nAdd to a complete set with a house\nAdds +$4M to rent\n(Total +$7M with house)';
+  }
+  
+  if(card.action === 'justno'){
+    return 'Just Say No\nBlock any action played against you\nCan be used during opponent\'s turn\n(Doesn\'t count as a play)';
+  }
+  
+  if(card.action === 'passgo'){
+    return 'Pass Go\nDraw 2 extra cards immediately';
+  }
+  
+  return null;
+}
+
+function showTooltip(cardIndex){
+  var card = G.players[0].hand[cardIndex];
+  if(!card || card.type === 'money' || card.type === 'property')return;
+  
+  var tooltip = getCardTooltip(card);
+  if(!tooltip)return;
+  
+  var modal = document.getElementById('modal-overlay');
+  modal.innerHTML = '<div class="tooltip-box">'+tooltip.replace(/\n/g, '<br>')+'</div>';
+  modal.style.display = 'flex';
+  modal.style.background = 'rgba(0,0,0,0.5)';
+  modal.onclick = function(){
+    modal.style.display = 'none';
+    modal.onclick = null;
+  };
+}
+
+function startTooltipTimer(cardIndex){
+  TOOLTIP_TIMER = setTimeout(function(){
+    showTooltip(cardIndex);
+  }, 500); // 500ms press and hold
+}
+
+function cancelTooltipTimer(){
+  if(TOOLTIP_TIMER){
+    clearTimeout(TOOLTIP_TIMER);
+    TOOLTIP_TIMER = null;
+  }
+}
+
+function selectPlayers(n){
+  SETUP.players = n;
+  var btns = document.querySelectorAll('.count-btn');
+  btns.forEach(function(b){b.classList.remove('selected');});
+  btns[n-2].classList.add('selected');
+  renderDiffRows();
+}
+
+function renderDiffRows(){
+  var h = '';
+  for(var i=1; i<SETUP.players; i++){
+    h += '<div class="diff-row"><span class="diff-name">Player '+(i+1)+'</span><select class="diff-select" id="diff'+i+'"><option value="Easy">Easy</option><option value="Medium" selected>Medium</option><option value="Hard">Hard</option></select></div>';
+  }
+  document.getElementById('diff-rows').innerHTML = h;
+}
+
+renderDiffRows();
+
+function showScreen(id){
+  var screens = document.querySelectorAll('.screen');
+  screens.forEach(function(s){s.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+}
+
+function startGame(){
+  SETUP.diffs = [];
+  for(var i=1; i<SETUP.players; i++){
+    var sel = document.getElementById('diff'+i);
+    SETUP.diffs.push(sel ? sel.value : 'Medium');
+  }
+  initGame();
+  showScreen('game-screen');
+}
+
+function createDeck(){
+  var deck = [];
+  for(var i=0; i<CARDS.length; i++){
+    var c = Object.assign({}, CARDS[i]);
+    c.id = i;
+    deck.push(c);
+  }
+  return shuffle(deck);
+}
+
+function shuffle(arr){
+  for(var i=arr.length-1; i>0; i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var temp=arr[i];arr[i]=arr[j];arr[j]=temp;
+  }
+  return arr;
+}
+
+function initGame(){
+  G = {
+    deck: createDeck(),
+    discard: [],
+    players: [],
+    currentPlayer: 0,
+    phase: 'play',
+    playsLeft: 3,
+    sel: null,
+    log: [],
+    moveHistory: [],
+    pendingAction: null,
+    lastPlayedRent: false,
+    lastRentAmount: 0,
+    lastRentColor: null
+  };
+  
+  // Create players
+  G.players.push({id:0, name:"You", isHuman:true, hand:[], properties:{}, bank:[], difficulty:""});
+  for(var i=0; i<SETUP.diffs.length; i++){
+    G.players.push({id:i+1, name:"AI "+(i+1), isHuman:false, hand:[], properties:{}, bank:[], difficulty:SETUP.diffs[i]});
+  }
+  
+  // Deal 5 cards to each
+  for(var p=0; p<G.players.length; p++){
+    for(var c=0; c<5; c++){
+      G.players[p].hand.push(G.deck.pop());
+    }
+  }
+  
+  // Human player draws 2 more cards for their first turn (starts with 7)
+  draw(G.players[0], 2);
+  
+  addLog("Game started! You drew 2 cards.");
+  render();
+}
+
+function draw(player, n){
+  if(!player || !player.hand) return;
+  
+  // Special rule: if deck is empty AND hand is empty, draw 5 next turn
+  if(G.deck.length === 0 && player.hand.length === 0 && n === 2){
+    if(G.discard.length === 0)return; // No cards left at all
+    G.deck = shuffle(G.discard.slice());
+    G.discard = [];
+    addLog("Deck reshuffled! Drawing 5 cards (empty hand rule)");
+    n = 5;
+  }
+  
+  for(var i=0; i<n; i++){
+    if(G.deck.length===0){
+      if(G.discard.length===0)break;
+      G.deck = shuffle(G.discard.slice());
+      G.discard = [];
+      addLog("Deck reshuffled from discard!");
+    }
+    var card = G.deck.pop();
+    if(card) player.hand.push(card);
+  }
+}
+
+function selectCard(idx){
+  G.sel = G.sel === idx ? null : idx;
+  render();
+}
+
+function playSelected(){
+  try{
+    if(G.sel===null)return;
+    var card = G.players[0].hand[G.sel];
+    if(!card){G.sel=null;render();return;}
+    if(card.type === 'money'){toast("Can't play money cards!");return;}
+    if(card.type === 'property')playProperty(card);
+    else if(card.type === 'action')playAction(card);
+  }catch(e){
+    console.error('playSelected error:', e);
+    toast('Error: '+e.message);
+    G.sel=null;
+    render();
+  }
+}
+
+function playProperty(card){
+  if(!card || !card.colors || !Array.isArray(card.colors) || card.colors.length === 0){
+    console.error("Invalid card in playProperty");
+    return;
+  }
+  
+  var p = G.players[0];
+  if(!p) return;
+  if(!p.properties) p.properties = {};
+  
+  if(card.colors.length === 1){
+    var c = card.colors[0];
+    if(!PS[c]){
+      console.error("Invalid color: " + c);
+      return;
+    }
+    
+    if(!p.properties[c])p.properties[c]=[];
+    
+    // Check if adding this would exceed maximum
+    var currentCount = 0;
+    for(var i=0; i<p.properties[c].length; i++){
+      var propCard = p.properties[c][i];
+      if(!propCard) continue;
+      if(!propCard._house && !propCard._hotel){
+        currentCount++;
+      }
+    }
+    
+    if(currentCount >= PS[c].size){
+      toast("Set is full! Max "+PS[c].size+" properties. Excess would need new set (not implemented yet).");
+      return;
+    }
+    
+    // Remove from hand and add to properties (properties are NOT discarded!)
+    var removedCard = p.hand.splice(G.sel,1)[0];
+    p.properties[c].push(removedCard);
+    addLog("You played "+removedCard.name);
+    addMove("You", "Played "+removedCard.name, true);
+    G.playsLeft--;
+    G.sel = null;
+    G.lastPlayedRent = false;
+    if(checkWin(p))return;
+    render(); // Show the property immediately
+  } else {
+    chooseWildColor(card);
+  }
+}
+
+function chooseWildColor(card){
+  try {
+    if(!card || !card.colors || !Array.isArray(card.colors) || card.colors.length === 0){
+      toast("Invalid wild card!");
+      return;
+    }
+    
+    var p = G.players[0];
+    if(!p) return;
+    if(!p.properties) p.properties = {};
+    
+    // Wild cards can only join a set that already has at least one standard (single-color) property
+    var candidateColors = card.colors.length >= 10 ?
+      ['brown','lightblue','pink','orange','red','yellow','green','darkblue','railroad','utility'] :
+      card.colors;
+    
+    var validColors = [];
+    for(var i=0; i<candidateColors.length; i++){
+      var c = candidateColors[i];
+      if(!PS[c]) continue;
+      if(!p.properties[c] || !Array.isArray(p.properties[c]) || p.properties[c].length === 0) continue;
+      // Must have at least one standard card (single-color, not house/hotel)
+      var hasStd = false;
+      var cnt = 0;
+      for(var k=0; k<p.properties[c].length; k++){
+        var pc = p.properties[c][k];
+        if(!pc) continue;
+        if(pc._house || pc._hotel) continue;
+        cnt++;
+        if(pc.colors && pc.colors.length === 1) hasStd = true;
+      }
+      if(hasStd && cnt < PS[c].size) validColors.push(c);
+    }
+    
+    if(validColors.length === 0){
+      toast("You need a standard property in a set first before adding a wild!");
+      return;
+    }
+    
+    var h = '<div class="modal-title">Choose Color</div><div class="modal-text">Where do you want to play '+card.name+'?</div><div class="modal-btns">';
+    for(var i=0; i<validColors.length; i++){
+      var c = validColors[i];
+      h += '<button class="modal-btn" style="background:'+PS[c].color+';color:#fff" onclick="placeWild(\''+c+'\')">'+PS[c].name+'</button>';
+    }
+    h += '<button class="modal-btn" style="background:#555;color:#fff;margin-top:6px" onclick="hideModal();render()">Cancel</button></div>';
+    showModal(h);
+  } catch(e) {
+    console.error("Error in chooseWildColor:", e);
+    toast("Error choosing color!");
+  }
+}
+
+function placeWild(color){
+  try {
+    hideModal();
+    
+    if(!color || !PS[color]){
+      toast("Invalid color!");
+      render();
+      return;
+    }
+    
+    var p = G.players[0];
+    if(!p || !p.hand || G.sel === null || G.sel === undefined){
+      toast("No card selected!");
+      render();
+      return;
+    }
+    
+    var card = p.hand[G.sel];
+    if(!card){
+      toast("Invalid card!");
+      render();
+      return;
+    }
+    
+    if(!p.properties) p.properties = {};
+    if(!p.properties[color])p.properties[color]=[];
+    
+    // Check if adding this would exceed maximum
+    var currentCount = 0;
+    for(var i=0; i<p.properties[color].length; i++){
+      var propCard = p.properties[color][i];
+      if(!propCard) continue;
+      if(!propCard._house && !propCard._hotel){
+        currentCount++;
+      }
+    }
+    
+    if(currentCount >= PS[color].size){
+      toast("Set is full! Max "+PS[color].size+" properties.");
+      render();
+      return;
+    }
+    
+    // Remove from hand and add to properties (properties are NOT discarded!)
+    var removedCard = p.hand.splice(G.sel,1)[0];
+    if(!removedCard){
+      toast("Error removing card!");
+      render();
+      return;
+    }
+    
+    removedCard._chosenColor = color; // Store the chosen color on the card
+    p.properties[color].push(removedCard);
+    addLog("You played "+removedCard.name+" as "+PS[color].name);
+    G.playsLeft--;
+    G.sel = null;
+    G.lastPlayedRent = false;
+    if(checkWin(p))return;
+    render(); // Show the property immediately
+  } catch(e) {
+    console.error("Error in placeWild:", e);
+    toast("Error placing property!");
+    render();
+  }
+}
+
+function playAction(card){
+  if(!card || !card.action){
+    toast("Invalid action card!");
+    G.sel = null;
+    render();
+    return;
+  }
+  
+  var a = card.action;
+  if(a==='passgo'){
+    draw(G.players[0],2);
+    addLog("You drew 2 cards");
+    var passGoCard = G.players[0].hand.splice(G.sel,1)[0];
+    if(passGoCard) G.discard.push(passGoCard);
+    G.playsLeft--;
+    G.sel=null;
+    G.lastPlayedRent=false;
+    render();
+  }
+  else if(a==='rent'||a==='wildrent'){G.lastPlayedRent=false;playRent(card);}
+  else if(a==='double'){playDoubleRent(card);}
+  else if(a==='sly'){G.lastPlayedRent=false;playSlyDeal(card);}
+  else if(a==='forced'){G.lastPlayedRent=false;playForcedDeal(card);}
+  else if(a==='dealbreaker'){G.lastPlayedRent=false;playDealBreaker(card);}
+  else if(a==='debt'){G.lastPlayedRent=false;playDebtCollector(card);}
+  else if(a==='birthday'){G.lastPlayedRent=false;playBirthday(card);}
+  else if(a==='house'){G.lastPlayedRent=false;playHouse(card);}
+  else if(a==='hotel'){G.lastPlayedRent=false;playHotel(card);}
+  else if(a==='justno'){toast("Just Say No can only be used in response to actions!");G.sel=null;render();}
+  else {toast("Action not implemented!");G.sel=null;G.lastPlayedRent=false;render();}
+}
+
+function bankSelected(){
+  if(G.sel===null)return;
+  
+  var p = G.players[0];
+  if(!p || !p.hand || !p.bank){
+    toast("Invalid game state!");
+    return;
+  }
+  
+  if(G.sel < 0 || G.sel >= p.hand.length){
+    toast("Invalid card selection!");
+    G.sel = null;
+    return;
+  }
+  
+  var card = p.hand[G.sel];
+  if(!card){
+    toast("No card selected!");
+    G.sel = null;
+    return;
+  }
+  
+  // Property cards can NEVER be banked - official Monopoly Deal rule
+  if(card.type === 'property'){
+    toast("Property cards cannot be banked! You must play them to your property collection.");
+    return;
+  }
+  
+  var bankedCard = p.hand.splice(G.sel,1)[0];
+  if(bankedCard) p.bank.push(bankedCard);
+  
+  addLog("You banked a card");
+  addMove("You", "Banked as money", true);
+  G.playsLeft--;
+  G.sel = null;
+  G.lastPlayedRent = false;
+  render(); // Show the card in bank immediately
+}
+
+function endTurn(){
+  var p = G.players[0];
+  if(p.hand.length > 7){
+    G.phase = 'discard';
+    render();
+    return;
+  }
+  G.currentPlayer = (G.currentPlayer+1)%G.players.length;
+  G.playsLeft = 3;
+  G.sel = null;
+  G.lastPlayedRent = false;
+  G.lastRentAmount = 0;
+  G.lastRentColor = null;
+  delete G._lastRentPaidBy;
+  delete G._lastRentWasWild;
+  delete G._lastWildRentTargetId;
+  delete G._lastRentTargetId;
+  
+  if(G.currentPlayer === 0){
+    draw(G.players[0], 2);
+    addLog("Your turn - drew 2 cards");
+    G.phase = 'play';
+    if(checkPendingWin())return;
+    render();
+  } else {
+    // Render the UI change FIRST to show buttons disappearing
+    render();
+    // THEN start AI turn after a brief delay for smooth transition
+    setTimeout(function(){aiTurn();}, 300);
+  }
+}
+
+function aiTurn(){
+  var p = G.players[G.currentPlayer];
+  
+  if(checkPendingWin())return;
+  
+  addLog(p.name+"'s turn");
+  draw(p, 2);
+  G.lastPlayedRent = false;
+  G.lastRentAmount = 0;
+  G.lastRentColor = null;
+  delete G._lastRentPaidBy;
+  
+  setTimeout(function(){aiPlay();}, 800);
+}
+
+// ADVANCED AI - Strategic Decision Making
+function aiEvaluateGameState(p){
+  // Evaluate current game state for strategic decisions
+  var state = {
+    myCompleteSets: 0,
+    myNearCompleteSets: [],
+    opponentCompleteSets: [],
+    leader: null,
+    maxSets: 0
+  };
+  
+  if(!p) return state;
+  if(!p.properties) p.properties = {};
+  
+  // Count my complete sets
+  for(var c in p.properties){
+    if(!p.properties.hasOwnProperty(c)) continue;
+    if(!p.properties[c]) continue;
+    
+    if(isComplete(p, c)){
+      state.myCompleteSets++;
+    } else if(Array.isArray(p.properties[c]) && p.properties[c].length > 0){
+      var needed = PS[c] ? PS[c].size : 3;
+      var current = 0;
+      for(var i=0; i<p.properties[c].length; i++){
+        var card = p.properties[c][i];
+        if(!card) continue; // Skip null/undefined entries
+        if(!card._house && !card._hotel) current++;
+      }
+      if(current >= needed - 1){
+        state.myNearCompleteSets.push({color: c, current: current, needed: needed});
+      }
+    }
+  }
+  
+  // Evaluate opponents
+  if(G.players && Array.isArray(G.players)){
+    for(var i=0; i<G.players.length; i++){
+      if(!G.players[i]) continue;
+      if(G.players[i].id === p.id) continue;
+      var op = G.players[i];
+      if(!op.properties) continue;
+      
+      var completeSets = 0;
+      for(var c in op.properties){
+        if(!op.properties.hasOwnProperty(c)) continue;
+        if(!op.properties[c]) continue;
+        
+        if(isComplete(op, c)){
+          completeSets++;
+          state.opponentCompleteSets.push({player: op, color: c});
+        }
+      }
+      if(completeSets > state.maxSets){
+        state.maxSets = completeSets;
+        state.leader = op;
+      }
+    }
+  }
+  
+  return state;
+}
+
+function aiChooseBestPropertyColor(p, card){
+  // Smart property placement - prioritize completing sets
+  if(!card || !card.colors || !Array.isArray(card.colors) || card.colors.length === 0){
+    return null;
+  }
+  
+  var isWild = card.colors.length > 1;
+  var colors = card.colors;
+  var bestColor = null;
+  var bestScore = -1;
+  
+  if(!p.properties) p.properties = {};
+  
+  for(var j=0; j<colors.length; j++){
+    var c = colors[j];
+    if(!c || !PS[c]) continue;
+    
+    var current = 0;
+    var hasStandard = false;
+    if(p.properties[c] && Array.isArray(p.properties[c])){
+      for(var i=0; i<p.properties[c].length; i++){
+        var propCard = p.properties[c][i];
+        if(!propCard) continue;
+        if(!propCard._house && !propCard._hotel){
+          current++;
+          if(propCard.colors && propCard.colors.length === 1) hasStandard = true;
+        }
+      }
+    }
+    
+    // Wild cards require at least one standard property already in the set
+    if(isWild && !hasStandard) continue;
+    
+    var needed = PS[c].size || 3;
+    var score = 0;
+    
+    // Prioritize sets we're close to completing
+    if(current === needed - 1) score += 100;
+    else if(current === needed - 2) score += 50;
+    else if(current === 0) score += 10; // Start new set (only for standard cards)
+    else score += 20;
+    
+    // Bonus for high-rent properties
+    if(c === 'darkblue' || c === 'green') score += 15;
+    else if(c === 'yellow' || c === 'red') score += 10;
+    
+    // Check if adding would exceed max
+    if(current >= needed) score = -999;
+    
+    if(score > bestScore){
+      bestScore = score;
+      bestColor = c;
+    }
+  }
+  
+  return bestColor;
+}
+
+function aiPrioritizeActions(p, state){
+  // Create prioritized list of actions to take
+  var actions = [];
+  
+  for(var i=0; i<p.hand.length; i++){
+    var card = p.hand[i];
+    var priority = 0;
+    
+    if(card.type === 'property'){
+      // Properties get high priority if they complete sets
+      var color = aiChooseBestPropertyColor(p, card);
+      if(!color){
+        // Wild card with no valid set - bank it
+        actions.push({type: 'bank', index: i, card: card, priority: 40});
+        continue;
+      }
+      if(!p.properties[color]) p.properties[color] = []; // Will be created before actual placement
+      var current = 0;
+      var propArr = p.properties[color] || [];
+      for(var j=0; j<propArr.length; j++){
+        if(propArr[j] && !propArr[j]._house && !propArr[j]._hotel) current++;
+      }
+      if(current === PS[color].size - 1) priority = 95; // COMPLETES SET!
+      else if(current === PS[color].size - 2) priority = 80;
+      else priority = 60;
+      
+      actions.push({type: 'property', index: i, card: card, priority: priority, color: color});
+      
+    } else if(card.type === 'action'){
+      if(card.action === 'dealbreaker'){
+        // Deal Breaker on leader if they have complete sets
+        if(state.opponentCompleteSets.length > 0) priority = 90;
+        else priority = 5;
+        actions.push({type: 'dealbreaker', index: i, card: card, priority: priority});
+        
+      } else if(card.action === 'sly'){
+        // Sly Deal to steal properties we need
+        var hasTarget = false;
+        for(var j=0; j<state.myNearCompleteSets.length; j++){
+          hasTarget = true; // Simplification - AI will check in actual function
+        }
+        priority = hasTarget ? 75 : 30;
+        actions.push({type: 'sly', index: i, card: card, priority: priority});
+        
+      } else if(card.action === 'forced'){
+        priority = 35;
+        actions.push({type: 'forced', index: i, card: card, priority: priority});
+        
+      } else if(card.action === 'rent' || card.action === 'wildrent'){
+        // Rent if we have complete sets
+        var hasCompleteSet = state.myCompleteSets > 0;
+        priority = hasCompleteSet ? 85 : 40;
+        actions.push({type: 'rent', index: i, card: card, priority: priority});
+        
+      } else if(card.action === 'double'){
+        // Double Rent only if we just played rent
+        priority = G.lastPlayedRent ? 100 : 0;
+        actions.push({type: 'double', index: i, card: card, priority: priority});
+        
+      } else if(card.action === 'debt'){
+        // Debt Collector on leader or richest player
+        priority = 55;
+        actions.push({type: 'debt', index: i, card: card, priority: priority});
+        
+      } else if(card.action === 'birthday'){
+        // Birthday is always good
+        priority = 70;
+        actions.push({type: 'birthday', index: i, card: card, priority: priority});
+        
+      } else if(card.action === 'house'){
+        // House if we have complete sets
+        priority = state.myCompleteSets > 0 ? 88 : 0;
+        actions.push({type: 'house', index: i, card: card, priority: priority});
+        
+      } else if(card.action === 'hotel'){
+        // Hotel if we have complete sets with houses
+        priority = 87; // Will check in function if valid
+        actions.push({type: 'hotel', index: i, card: card, priority: priority});
+        
+      } else if(card.action === 'passgo'){
+        // Pass Go for card advantage
+        priority = 45;
+        actions.push({type: 'passgo', index: i, card: card, priority: priority});
+        
+      } else {
+        // Bank other actions
+        actions.push({type: 'bank', index: i, card: card, priority: 10});
+      }
+      
+    } else if(card.type === 'money'){
+      // Bank money if we need to save plays for better cards
+      actions.push({type: 'bank', index: i, card: card, priority: 15});
+    }
+  }
+  
+  // Sort by priority (highest first)
+  actions.sort(function(a, b){ return b.priority - a.priority; });
+  return actions;
+}
+
+function aiPlay(){
+  var p = G.players[G.currentPlayer];
+  var diff = p.difficulty;
+  
+  try {
+    // Evaluate game state
+    var state = aiEvaluateGameState(p);
+    
+    // Get prioritized action list
+    var actions = aiPrioritizeActions(p, state);
+    
+    // Execute actions in priority order
+    for(var a=0; a<actions.length && G.playsLeft > 0; a++){
+      var action = actions[a];
+      
+      // Skip if index is now invalid (hand changed)
+      if(action.index >= p.hand.length) continue;
+      
+      // Get current card at this index
+      var card = p.hand[action.index];
+      if(!card) continue;
+      
+      if(action.type === 'property'){
+        var color = action.color;
+        if(!p.properties[color]) p.properties[color] = [];
+        
+        // Check max
+        var current = 0;
+        for(var i=0; i<p.properties[color].length; i++){
+          var propCard = p.properties[color][i];
+          if(!propCard) continue;
+          if(!propCard._house && !propCard._hotel) current++;
+        }
+        if(current >= PS[color].size) continue; // Skip if full
+        
+        card._chosenColor = color;
+        p.properties[color].push(card);
+        addLog(p.name+" played "+card.name);
+        addMove(p.name, "Played "+card.name, false);
+        p.hand.splice(action.index, 1);
+        G.playsLeft--;
+        
+        // Rebuild action list with updated indices
+        state = aiEvaluateGameState(p);
+        actions = aiPrioritizeActions(p, state);
+        a = -1; // Reset loop
+        
+        if(checkWin(p)) return;
+        
+      } else if(action.type === 'rent'){
+        aiChargeRent(p, card, action.index);
+        return; // Exit and continue after rent
+        
+      } else if(action.type === 'double'){
+        if(G.lastPlayedRent && G.lastRentAmount){
+          aiDoubleRent(p, card, action.index);
+          return;
+        }
+        
+      } else if(action.type === 'dealbreaker'){
+        aiDealBreaker(p, card, action.index);
+        return;
+        
+      } else if(action.type === 'sly'){
+        aiSlyDeal(p, card, action.index);
+        return;
+        
+      } else if(action.type === 'forced'){
+        aiForcedDeal(p, card, action.index);
+        return;
+        
+      } else if(action.type === 'debt'){
+        aiDebtCollector(p, card, action.index);
+        return;
+        
+      } else if(action.type === 'birthday'){
+        aiBirthday(p, card, action.index);
+        return;
+        
+      } else if(action.type === 'house'){
+        aiHouse(p, card, action.index);
+        state = aiEvaluateGameState(p);
+        actions = aiPrioritizeActions(p, state);
+        a = -1;
+        
+      } else if(action.type === 'hotel'){
+        aiHotel(p, card, action.index);
+        state = aiEvaluateGameState(p);
+        actions = aiPrioritizeActions(p, state);
+        a = -1;
+        
+      } else if(action.type === 'passgo'){
+        draw(p, 2);
+        addLog(p.name+" drew 2 cards (Pass Go)");
+        addMove(p.name, "Played Pass Go (drew 2)", false);
+        var passGoCard = p.hand.splice(action.index, 1)[0];
+        if(passGoCard) G.discard.push(passGoCard);
+        G.playsLeft--;
+        state = aiEvaluateGameState(p);
+        actions = aiPrioritizeActions(p, state);
+        a = -1;
+        
+      } else if(action.type === 'bank'){
+        p.bank.push(p.hand.splice(action.index, 1)[0]);
+        addLog(p.name+" banked a card");
+        addMove(p.name, "Banked as money", false);
+        G.playsLeft--;
+        state = aiEvaluateGameState(p);
+        actions = aiPrioritizeActions(p, state);
+        a = -1;
+      }
+    }
+  } catch(e) {
+    console.error('AI Error:', e);
+    addLog(p.name+" had an error, ending turn");
+    
+    // Force end this AI's turn immediately
+    G.playsLeft = 0;
+    
+    // Discard excess cards if needed
+    while(p.hand.length > 7){
+      var worstIndex = 0;
+      var worstValue = 999;
+      
+      for(var i=0; i<p.hand.length; i++){
+        var card = p.hand[i];
+        if(!card) continue;
+        var val = card.value || 0;
+        if(card.type === 'property') val = 15;
+        if(card.action === 'dealbreaker') val = 20;
+        if(card.action === 'justno') val = 18;
+        if(val < worstValue){
+          worstValue = val;
+          worstIndex = i;
+        }
+      }
+      
+      var discarded = p.hand.splice(worstIndex, 1)[0];
+      if(discarded) G.discard.push(discarded);
+    }
+    
+    // End turn and move to next player
+    G.currentPlayer = (G.currentPlayer+1)%G.players.length;
+    G.playsLeft = 3;
+    
+    if(G.currentPlayer === 0){
+      draw(G.players[0], 2);
+      addLog("Your turn - drew 2 cards");
+      G.phase = 'play';
+      if(checkPendingWin())return;
+      render();
+    } else {
+      setTimeout(function(){aiTurn();}, 500);
+    }
+    return; // Exit immediately after error
+  }
+  
+  // Smart discard - keep valuable cards (normal flow)
+  while(p.hand.length > 7){
+    var worstIndex = 0;
+    var worstValue = 999;
+    
+    for(var i=0; i<p.hand.length; i++){
+      var card = p.hand[i];
+      if(!card) continue; // Skip null/undefined cards
+      
+      var val = card.value || 0;
+      if(card.type === 'property') val = 15; // Keep properties
+      if(card.action === 'dealbreaker') val = 20;
+      if(card.action === 'justno') val = 18;
+      
+      if(val < worstValue){
+        worstValue = val;
+        worstIndex = i;
+      }
+    }
+    
+    var discarded = p.hand.splice(worstIndex, 1)[0];
+    if(discarded) G.discard.push(discarded);
+  }
+  
+  G.currentPlayer = (G.currentPlayer+1)%G.players.length;
+  G.playsLeft = 3;
+  if(G.currentPlayer === 0){
+    draw(G.players[0], 2);
+    addLog("Your turn - drew 2 cards");
+    G.phase = 'play';
+    if(checkPendingWin())return;
+    render();
+  } else {
+    setTimeout(function(){aiTurn();}, 500);
+  }
+}
+
+function aiChargeRent(p, card, idx){
+  try {
+    if(!p || !card || idx === undefined){
+      console.error("Invalid parameters in aiChargeRent");
+      setTimeout(function(){aiPlay();}, 800);
+      return;
+    }
+    
+    if(!p.hand || !p.hand[idx]){
+      console.error("Invalid hand or index");
+      setTimeout(function(){aiPlay();}, 800);
+      return;
+    }
+    
+    var isWildRent = card.action === 'wildrent';
+    
+    // Get valid colors based on card type
+    var validColors = [];
+    if(isWildRent){
+      // Wild rent: can charge any color AI has properties in
+      if(p.properties){
+        for(var c in p.properties){
+          if(p.properties.hasOwnProperty(c) && p.properties[c] && Array.isArray(p.properties[c]) && p.properties[c].length > 0){
+            validColors.push(c);
+          }
+        }
+      }
+    } else {
+      // Regular rent: can ONLY charge colors on the card that AI has properties in
+      if(!card.colors || !Array.isArray(card.colors)){
+        console.error("Rent card missing colors array");
+        // Bank it
+        if(!p.bank) p.bank = [];
+        var rentCard = p.hand.splice(idx,1)[0];
+        if(rentCard) p.bank.push(rentCard);
+        addLog(p.name+" banked a rent card");
+        G.playsLeft--;
+        setTimeout(function(){aiPlay();}, 500);
+        return;
+      }
+      
+      // Only include colors from the card that AI actually has
+      for(var i=0; i<card.colors.length; i++){
+        var c = card.colors[i];
+        if(p.properties && p.properties[c] && Array.isArray(p.properties[c]) && p.properties[c].length > 0){
+          validColors.push(c);
+        }
+      }
+    }
+    
+    if(validColors.length === 0){
+      // Can't charge rent on any valid color, bank it
+      if(!p.bank) p.bank = [];
+      var rentCard2 = p.hand.splice(idx,1)[0];
+      if(rentCard2) p.bank.push(rentCard2);
+      addLog(p.name+" banked a rent card");
+      G.playsLeft--;
+      setTimeout(function(){aiPlay();}, 500);
+      return;
+    }
+    
+    // SMART: Choose color with highest rent from valid colors
+    var bestColor = validColors[0];
+    var bestRent = calculateRent(p, validColors[0]) || 0;
+    
+    for(var i=1; i<validColors.length; i++){
+      var rent = calculateRent(p, validColors[i]) || 0;
+      if(rent > bestRent){
+        bestRent = rent;
+        bestColor = validColors[i];
+      }
+    }
+    
+    var color = bestColor;
+    var rent = bestRent;
+    
+    if(!PS[color]){
+      console.error("Invalid color selected");
+      setTimeout(function(){aiPlay();}, 800);
+      return;
+    }
+    
+    p.hand.splice(idx,1);
+    G.discard.push(card);
+    G.playsLeft--;
+    
+    // Store rent state for potential Double the Rent
+    G.lastPlayedRent = true;
+    G.lastRentAmount = rent;
+    G.lastRentColor = color;
+    G._lastRentWasWild = isWildRent;
+    G._lastRentTargetId = null; // Will be set for wild rent
+    G._lastRentPaidBy = []; // Track who actually paid (for Double Rent targeting)
+    
+    if(isWildRent){
+      // WILD RENT: Target ONE opponent (choose richest)
+      var bestTarget = null;
+      var bestAssets = -1;
+      for(var i=0; i<G.players.length; i++){
+        if(G.players[i].id === p.id) continue;
+        var assets = bankVal(G.players[i]);
+        // Also count property values
+        if(G.players[i].properties){
+          for(var c2 in G.players[i].properties){
+            if(!G.players[i].properties.hasOwnProperty(c2)) continue;
+            if(!G.players[i].properties[c2]) continue;
+            for(var j=0; j<G.players[i].properties[c2].length; j++){
+              if(G.players[i].properties[c2][j]) assets += (G.players[i].properties[c2][j].value || 0);
+            }
+          }
+        }
+        if(assets > bestAssets){
+          bestAssets = assets;
+          bestTarget = G.players[i];
+        }
+      }
+      
+      if(!bestTarget){
+        addLog(p.name+" charged Wild Rent but no targets!");
+        setTimeout(function(){aiPlay();}, 800);
+        return;
+      }
+      
+      G._lastRentTargetId = bestTarget.id; // Track target for Double Rent
+      
+      addLog(p.name+" charged "+bestTarget.name+" $"+rent+"M "+PS[color].name+" rent (Wild Rent)!");
+      addMove(p.name, "Charged "+bestTarget.name+" $"+rent+"M "+PS[color].name+" rent", false);
+      
+      if(bestTarget.isHuman){
+        // Offer Just Say No to human
+        offerJustSayNo(
+          p.name + " is charging you $" + rent + "M rent (Wild Rent)!",
+          function(){
+            // Human paid - track for double rent
+            if(G._lastRentPaidBy) G._lastRentPaidBy.push(bestTarget.id);
+            G._afterPayment = function(){
+              setTimeout(function(){aiPlay();}, 800);
+            };
+            collectPayment(bestTarget, p, rent);
+          },
+          function(){
+            addLog("Rent cancelled by Just Say No!");
+            G.lastPlayedRent = false;
+            setTimeout(function(){aiPlay();}, 800);
+          }
+        );
+      } else {
+        // AI target - offer JSN before collecting
+        offerJustSayNoToAI(bestTarget,
+          p.name + " charged " + bestTarget.name + " $" + rent + "M rent (Wild Rent)!",
+          function(){
+            // AI paid - track for double rent
+            if(G._lastRentPaidBy) G._lastRentPaidBy.push(bestTarget.id);
+            autoPayment(bestTarget, p, rent);
+            setTimeout(function(){aiPlay();}, 800);
+          },
+          function(){
+            addLog(bestTarget.name + " blocked Wild Rent with Just Say No!");
+            G.lastPlayedRent = false;
+            setTimeout(function(){aiPlay();}, 800);
+          }
+        );
+      }
+    } else {
+      // REGULAR RENT: Charge ALL opponents
+      addLog(p.name+" charged $"+rent+"M "+PS[color].name+" rent to all opponents!");
+      addMove(p.name, "Charged $"+rent+"M "+PS[color].name+" rent (all)", false);
+      
+      // Collect from all opponents in sequence
+      var opponents = [];
+      for(var i=0; i<G.players.length; i++){
+        if(G.players[i].id !== p.id) opponents.push(G.players[i]);
+      }
+      
+      aiCollectRentFromAll(p, opponents, 0, rent, function(){
+        setTimeout(function(){aiPlay();}, 800);
+      });
+    }
+  } catch(e) {
+    console.error("Error in aiChargeRent:", e);
+    setTimeout(function(){aiPlay();}, 800);
+  }
+}
+
+function aiCollectRentFromAll(collector, opponents, index, rent, callback){
+  if(index >= opponents.length){
+    if(callback) callback();
+    return;
+  }
+  
+  var target = opponents[index];
+  if(!target){
+    aiCollectRentFromAll(collector, opponents, index + 1, rent, callback);
+    return;
+  }
+  
+  if(target.isHuman){
+    // Offer Just Say No to human
+    offerJustSayNo(
+      collector.name + " is charging you $" + rent + "M rent!",
+      function(){
+        // Human didn't use JSN - track that they paid
+        if(G._lastRentPaidBy) G._lastRentPaidBy.push(target.id);
+        G._afterPayment = function(){
+          aiCollectRentFromAll(collector, opponents, index + 1, rent, callback);
+        };
+        collectPayment(target, collector, rent);
+      },
+      function(){
+        // Human used JSN
+        addLog("Rent cancelled by Just Say No!");
+        aiCollectRentFromAll(collector, opponents, index + 1, rent, callback);
+      }
+    );
+  } else {
+    // AI opponent - offer JSN before auto-paying
+    offerJustSayNoToAI(target,
+      collector.name + " charged $" + rent + "M rent!",
+      function(){
+        // AI didn't block - track that they paid
+        if(G._lastRentPaidBy) G._lastRentPaidBy.push(target.id);
+        autoPayment(target, collector, rent);
+        addLog(target.name + " paid rent to " + collector.name);
+        aiCollectRentFromAll(collector, opponents, index + 1, rent, callback);
+      },
+      function(){
+        addLog(target.name + " blocked rent with Just Say No!");
+        aiCollectRentFromAll(collector, opponents, index + 1, rent, callback);
+      }
+    );
+  }
+}
+
+function aiSlyDeal(p, card, idx){
+  // Smart stealing - check ALL opponents, not just human
+  if(!p.properties) p.properties = {};
+  
+  var stealable = [];
+  
+  for(var oi=0; oi<G.players.length; oi++){
+    var op = G.players[oi];
+    if(!op || op.id === p.id) continue;
+    if(!op.properties) continue;
+    
+    for(var c in op.properties){
+      if(!op.properties.hasOwnProperty(c)) continue;
+      if(!op.properties[c] || !Array.isArray(op.properties[c])) continue;
+      if(!PS[c]) continue;
+      if(isComplete(op, c)) continue;
+      
+      // Check for actual stealable cards (not house/hotel)
+      var hasStealable = false;
+      for(var si=0; si<op.properties[c].length; si++){
+        var sc = op.properties[c][si];
+        if(sc && !sc._house && !sc._hotel){ hasStealable = true; break; }
+      }
+      if(!hasStealable) continue;
+      
+      var priority = 0;
+      if(!p.properties[c]) p.properties[c] = [];
+      var current = 0;
+      for(var i=0; i<p.properties[c].length; i++){
+        var propCard = p.properties[c][i];
+        if(propCard && !propCard._house && !propCard._hotel) current++;
+      }
+      var needed = PS[c].size || 3;
+      if(current === needed - 1) priority = 100;
+      else if(current === needed - 2) priority = 50;
+      else if(current > 0) priority = 25;
+      else priority = 10;
+      
+      stealable.push({color: c, priority: priority, victim: op});
+    }
+  }
+  
+  if(stealable.length === 0){
+    if(!p.bank) p.bank = [];
+    p.bank.push(p.hand.splice(idx,1)[0]);
+    addLog(p.name+" banked Sly Deal");
+    G.playsLeft--;
+    setTimeout(function(){aiPlay();}, 500);
+    return;
+  }
+  
+  stealable.sort(function(a, b){ return b.priority - a.priority; });
+  var best = stealable[0];
+  var color = best.color;
+  var victim = best.victim;
+  
+  var doSteal = function(){
+    if(!victim.properties[color] || victim.properties[color].length === 0){
+      addLog("No property to steal!");
+      p.hand.splice(idx,1);
+      G.discard.push(card);
+      G.playsLeft--;
+      setTimeout(function(){aiPlay();}, 800);
+      return;
+    }
+    var stolenIdx = -1;
+    for(var si=victim.properties[color].length-1; si>=0; si--){
+      var sc = victim.properties[color][si];
+      if(sc && !sc._house && !sc._hotel){ stolenIdx = si; break; }
+    }
+    if(stolenIdx === -1){
+      addLog("No stealable property!");
+      p.hand.splice(idx,1); G.discard.push(card); G.playsLeft--;
+      setTimeout(function(){aiPlay();}, 800);
+      return;
+    }
+    // Check if set was complete before (for orphaned buildings)
+    var wasComplete = isComplete(victim, color);
+    var stolen = victim.properties[color].splice(stolenIdx, 1)[0];
+    if(!stolen){
+      p.hand.splice(idx,1); G.discard.push(card); G.playsLeft--;
+      setTimeout(function(){aiPlay();}, 800);
+      return;
+    }
+    if(!p.properties[color]) p.properties[color] = [];
+    p.properties[color].push(stolen);
+    addLog(p.name+" stole "+stolen.name+" from "+victim.name+"!");
+    addMove(p.name, "Stole "+stolen.name+" from "+victim.name, false);
+    // Handle orphaned buildings
+    if(wasComplete && !isComplete(victim, color) && victim.properties[color]){
+      for(var bi=victim.properties[color].length-1; bi>=0; bi--){
+        var bc = victim.properties[color][bi];
+        if(bc && (bc._house || bc._hotel)){
+          victim.properties[color].splice(bi, 1);
+          if(!victim.bank) victim.bank = [];
+          victim.bank.push(bc);
+          addLog((bc._house ? "House" : "Hotel") + " removed from broken set");
+        }
+      }
+    }
+    if(victim.properties[color] && victim.properties[color].length === 0) delete victim.properties[color];
+    p.hand.splice(idx,1); G.discard.push(card); G.playsLeft--;
+    if(checkWin(p)) return;
+    setTimeout(function(){aiPlay();}, 800);
+  };
+  
+  var cancelSteal = function(){
+    addLog(victim.name+" blocked Sly Deal with Just Say No!");
+    p.hand.splice(idx,1); G.discard.push(card); G.playsLeft--;
+    setTimeout(function(){aiPlay();}, 800);
+  };
+  
+  if(victim.isHuman){
+    offerJustSayNo(
+      p.name+" is using Sly Deal to steal your "+PS[color].name+" property!",
+      doSteal, cancelSteal
+    );
+  } else {
+    offerJustSayNoToAI(victim,
+      p.name+" used Sly Deal on "+victim.name+"'s "+PS[color].name+"!",
+      doSteal, cancelSteal
+    );
+  }
+}
+
+function aiDebtCollector(p, card, idx){
+  if(!p || !card || idx === undefined) {
+    console.error("Invalid parameters in aiDebtCollector");
+    setTimeout(function(){aiPlay();}, 800);
+    return;
+  }
+  
+  if(!p.hand || !p.hand[idx]){
+    console.error("Invalid hand or index in aiDebtCollector");
+    setTimeout(function(){aiPlay();}, 800);
+    return;
+  }
+  
+  // Find richest opponent (bank + property value)
+  var bestTarget = null;
+  var bestAssets = -1;
+  for(var i=0; i<G.players.length; i++){
+    if(G.players[i].id === p.id) continue;
+    var assets = bankVal(G.players[i]);
+    if(G.players[i].properties){
+      for(var c in G.players[i].properties){
+        if(!G.players[i].properties.hasOwnProperty(c)) continue;
+        if(!G.players[i].properties[c]) continue;
+        for(var j=0; j<G.players[i].properties[c].length; j++){
+          if(G.players[i].properties[c][j]) assets += (G.players[i].properties[c][j].value || 0);
+        }
+      }
+    }
+    if(assets > bestAssets){
+      bestAssets = assets;
+      bestTarget = G.players[i];
+    }
+  }
+  
+  if(!bestTarget){
+    if(!p.bank) p.bank = [];
+    p.bank.push(p.hand.splice(idx,1)[0]);
+    addLog(p.name+" banked Debt Collector");
+    G.playsLeft--;
+    setTimeout(function(){aiPlay();}, 500);
+    return;
+  }
+  
+  addLog(p.name+" used Debt Collector on "+bestTarget.name+"!");
+  addMove(p.name, "Played Debt Collector ($5M) on "+bestTarget.name, false);
+  p.hand.splice(idx,1);
+  G.discard.push(card);
+  G.playsLeft--;
+  
+  var doCollect = function(){
+    if(bestTarget.isHuman){
+      G._afterPayment = function(){
+        setTimeout(function(){aiPlay();}, 800);
+      };
+    }
+    collectPayment(bestTarget, p, 5);
+    if(!bestTarget.isHuman){
+      setTimeout(function(){aiPlay();}, 800);
+    }
+  };
+  
+  var cancelCollect = function(){
+    addLog(bestTarget.name+" blocked Debt Collector with Just Say No!");
+    setTimeout(function(){aiPlay();}, 800);
+  };
+  
+  if(bestTarget.isHuman){
+    offerJustSayNo(
+      p.name + " is demanding $5M from you!",
+      doCollect, cancelCollect
+    );
+  } else {
+    offerJustSayNoToAI(bestTarget,
+      p.name+" used Debt Collector on "+bestTarget.name+"!",
+      doCollect, cancelCollect
+    );
+  }
+}
+
+function aiBirthday(p, card, idx){
+  addLog(p.name+"'s birthday!");
+  addMove(p.name, "Played Birthday ($2M from all)", false);
+  p.hand.splice(idx,1);
+  G.discard.push(card);
+  G.playsLeft--;
+  
+  // Collect $2M from ALL other players sequentially (with JSN for each)
+  var otherPlayers = [];
+  for(var i=0; i<G.players.length; i++){
+    if(G.players[i].id !== p.id) otherPlayers.push(G.players[i]);
+  }
+  
+  if(otherPlayers.length === 0){
+    setTimeout(function(){aiPlay();}, 800);
+    return;
+  }
+  
+  aiBirthdayCollectFromAll(p, otherPlayers, 0);
+}
+
+function aiBirthdayCollectFromAll(collector, opponents, index){
+  if(index >= opponents.length){
+    setTimeout(function(){aiPlay();}, 800);
+    return;
+  }
+  
+  var target = opponents[index];
+  if(!target){
+    aiBirthdayCollectFromAll(collector, opponents, index + 1);
+    return;
+  }
+  
+  if(target.isHuman){
+    offerJustSayNo(
+      collector.name + " played It's My Birthday! Pay $2M?",
+      function(){
+        G._afterPayment = function(){
+          aiBirthdayCollectFromAll(collector, opponents, index + 1);
+        };
+        collectPayment(target, collector, 2);
+      },
+      function(){
+        addLog("You cancelled the birthday with Just Say No!");
+        aiBirthdayCollectFromAll(collector, opponents, index + 1);
+      }
+    );
+  } else {
+    // AI opponent - offer JSN
+    offerJustSayNoToAI(target,
+      collector.name + " played Birthday! " + target.name + " must pay $2M!",
+      function(){
+        collectBirthdayFromAI(target, collector, 2);
+        aiBirthdayCollectFromAll(collector, opponents, index + 1);
+      },
+      function(){
+        addLog(target.name + " blocked Birthday with Just Say No!");
+        aiBirthdayCollectFromAll(collector, opponents, index + 1);
+      }
+    );
+  }
+}
+
+function collectBirthdayFromAI(fromAI, toPlayer, amount){
+  // AI players automatically pay without UI
+  if(!fromAI || !toPlayer) {
+    console.error("Invalid players in collectBirthdayFromAI");
+    return;
+  }
+  
+  var paid = 0;
+  var propsReceived = [];
+  
+  // Take from bank first
+  if(fromAI.bank && Array.isArray(fromAI.bank)){
+    while(fromAI.bank.length > 0 && paid < amount){
+      var card = fromAI.bank.pop();
+      if(!card) continue;
+      if(!toPlayer.bank) toPlayer.bank = [];
+      toPlayer.bank.push(card);
+      paid += card.value || 0;
+    }
+  }
+  
+  // If still need more, take properties (skip houses/hotels, prefer incomplete sets)
+  if(paid < amount && fromAI.properties){
+    // First pass: incomplete sets
+    for(var c in fromAI.properties){
+      if(paid >= amount) break;
+      if(!fromAI.properties.hasOwnProperty(c)) continue;
+      if(!fromAI.properties[c]) continue;
+      if(!Array.isArray(fromAI.properties[c])) continue;
+      if(isComplete(fromAI, c)) continue; // Skip complete sets first
+      
+      while(fromAI.properties[c] && fromAI.properties[c].length > 0 && paid < amount){
+        var propIdx = -1;
+        for(var pi=fromAI.properties[c].length-1; pi>=0; pi--){
+          var pc = fromAI.properties[c][pi];
+          if(pc && !pc._house && !pc._hotel && (pc.value || 0) > 0){ propIdx = pi; break; }
+        }
+        if(propIdx === -1) break;
+        
+        var prop = fromAI.properties[c].splice(propIdx, 1)[0];
+        if(!prop) continue;
+        
+        // Properties go to receiver's property collection (official rule)
+        var propColor = (prop._chosenColor || (prop.colors && prop.colors.length === 1 ? prop.colors[0] : c));
+        if(!toPlayer.properties) toPlayer.properties = {};
+        if(!toPlayer.properties[propColor]) toPlayer.properties[propColor] = [];
+        toPlayer.properties[propColor].push(prop);
+        paid += prop.value || 0;
+        if(toPlayer.isHuman) propsReceived.push(prop.name);
+        
+        if(fromAI.properties[c] && fromAI.properties[c].length === 0) delete fromAI.properties[c];
+      }
+    }
+    
+    // Second pass: complete sets if still owe
+    if(paid < amount){
+      for(var c2 in fromAI.properties){
+        if(paid >= amount) break;
+        if(!fromAI.properties.hasOwnProperty(c2)) continue;
+        if(!fromAI.properties[c2]) continue;
+        if(!Array.isArray(fromAI.properties[c2])) continue;
+        
+        while(fromAI.properties[c2] && fromAI.properties[c2].length > 0 && paid < amount){
+          var propIdx2 = -1;
+          for(var pi2=fromAI.properties[c2].length-1; pi2>=0; pi2--){
+            var pc2 = fromAI.properties[c2][pi2];
+            if(pc2 && !pc2._house && !pc2._hotel && (pc2.value || 0) > 0){ propIdx2 = pi2; break; }
+          }
+          if(propIdx2 === -1) break;
+          
+          var wasComplete3 = isComplete(fromAI, c2);
+          var prop2 = fromAI.properties[c2].splice(propIdx2, 1)[0];
+          if(!prop2) continue;
+          
+          // Properties go to receiver's property collection
+          var propColor2 = (prop2._chosenColor || (prop2.colors && prop2.colors.length === 1 ? prop2.colors[0] : c2));
+          if(!toPlayer.properties) toPlayer.properties = {};
+          if(!toPlayer.properties[propColor2]) toPlayer.properties[propColor2] = [];
+          toPlayer.properties[propColor2].push(prop2);
+          paid += prop2.value || 0;
+          if(toPlayer.isHuman) propsReceived.push(prop2.name);
+          
+          // Handle orphaned buildings when breaking complete set
+          if(wasComplete3 && !isComplete(fromAI, c2) && fromAI.properties[c2]){
+            for(var bi=fromAI.properties[c2].length-1; bi>=0; bi--){
+              var bc = fromAI.properties[c2][bi];
+              if(bc && (bc._house || bc._hotel)){
+                fromAI.properties[c2].splice(bi, 1);
+                if(!toPlayer.bank) toPlayer.bank = [];
+                toPlayer.bank.push(bc);
+                paid += bc.value || 0;
+              }
+            }
+          }
+          
+          if(fromAI.properties[c2] && fromAI.properties[c2].length === 0) delete fromAI.properties[c2];
+        }
+      }
+    }
+  }
+  
+  var actualPaid = Math.min(paid, amount);
+  if(actualPaid > 0){
+    var receiverName = toPlayer.isHuman ? "you" : toPlayer.name;
+    addLog(fromAI.name + " paid " + receiverName + " $" + actualPaid + "M");
+    if(propsReceived.length > 0){
+      toast("📥 "+fromAI.name+" paid you: "+propsReceived.join(", "));
+      addLog("You received: "+propsReceived.join(", "));
+    }
+  } else {
+    addLog(fromAI.name + " has no money!");
+  }
+}
+
+function aiDoubleRent(p, card, idx){
+  var doubleAmount = G.lastRentAmount;
+  var totalAmount = G.lastRentAmount * 2;
+  var paidBy = G._lastRentPaidBy || [];
+  
+  // If nobody paid the base rent, double has no effect
+  if(paidBy.length === 0){
+    addLog(p.name+" tried Double Rent but no one paid the base rent!");
+    p.hand.splice(idx,1); G.discard.push(card); G.playsLeft--;
+    G.lastPlayedRent = false;
+    delete G._lastRentPaidBy;
+    setTimeout(function(){aiPlay();}, 800);
+    return;
+  }
+  
+  addLog(p.name+" used Double the Rent! ($"+G.lastRentAmount+"M → $"+totalAmount+"M total)");
+  p.hand.splice(idx,1);
+  G.discard.push(card);
+  G.playsLeft--;
+  G.lastPlayedRent = false;
+  
+  if(G._lastRentWasWild && G._lastRentTargetId !== null && G._lastRentTargetId !== undefined){
+    // Wild rent double: charge the same single target ONLY if they paid
+    if(paidBy.indexOf(G._lastRentTargetId) === -1){
+      addLog("Double Rent skipped - target blocked the base rent!");
+      delete G.lastRentAmount; delete G.lastRentColor;
+      delete G._lastRentWasWild; delete G._lastRentTargetId; delete G._lastRentPaidBy;
+      setTimeout(function(){aiPlay();}, 800);
+      return;
+    }
+    
+    var target = null;
+    for(var i=0; i<G.players.length; i++){
+      if(G.players[i].id === G._lastRentTargetId){ target = G.players[i]; break; }
+    }
+    
+    if(!target){
+      addLog("Double Rent target not found!");
+      delete G.lastRentAmount; delete G.lastRentColor;
+      delete G._lastRentWasWild; delete G._lastRentTargetId; delete G._lastRentPaidBy;
+      setTimeout(function(){aiPlay();}, 800);
+      return;
+    }
+    
+    if(target.isHuman){
+      offerJustSayNo(
+        p.name + " is doubling the rent! Additional $" + doubleAmount + "M!",
+        function(){
+          G._afterPayment = function(){
+            delete G.lastRentAmount; delete G.lastRentColor;
+            delete G._lastRentWasWild; delete G._lastRentTargetId; delete G._lastRentPaidBy;
+            setTimeout(function(){aiPlay();}, 800);
+          };
+          collectPayment(target, p, doubleAmount);
+        },
+        function(){
+          addLog("Double Rent cancelled by Just Say No!");
+          delete G.lastRentAmount; delete G.lastRentColor;
+          delete G._lastRentWasWild; delete G._lastRentTargetId; delete G._lastRentPaidBy;
+          setTimeout(function(){aiPlay();}, 800);
+        }
+      );
+    } else {
+      // AI target
+      offerJustSayNoToAI(target,
+        p.name + " doubled the rent! Additional $" + doubleAmount + "M!",
+        function(){
+          autoPayment(target, p, doubleAmount);
+          delete G.lastRentAmount; delete G.lastRentColor;
+          delete G._lastRentWasWild; delete G._lastRentTargetId; delete G._lastRentPaidBy;
+          setTimeout(function(){aiPlay();}, 800);
+        },
+        function(){
+          addLog(target.name + " blocked Double Rent with Just Say No!");
+          delete G.lastRentAmount; delete G.lastRentColor;
+          delete G._lastRentWasWild; delete G._lastRentTargetId; delete G._lastRentPaidBy;
+          setTimeout(function(){aiPlay();}, 800);
+        }
+      );
+    }
+  } else {
+    // Regular rent double: charge ONLY opponents who paid the base rent
+    var opponents = [];
+    for(var i=0; i<paidBy.length; i++){
+      var op = G.players[paidBy[i]];
+      if(op && op.id !== p.id) opponents.push(op);
+    }
+    
+    // Use sequential collection with JSN for each opponent
+    aiCollectDoubleRentFromAll(p, opponents, 0, doubleAmount, function(){
+      delete G.lastRentAmount; delete G.lastRentColor;
+      delete G._lastRentWasWild; delete G._lastRentTargetId; delete G._lastRentPaidBy;
+      setTimeout(function(){aiPlay();}, 800);
+    });
+  }
+}
+
+function aiCollectDoubleRentFromAll(collector, opponents, index, amount, callback){
+  if(index >= opponents.length){
+    if(callback) callback();
+    return;
+  }
+  
+  var target = opponents[index];
+  if(!target){
+    aiCollectDoubleRentFromAll(collector, opponents, index + 1, amount, callback);
+    return;
+  }
+  
+  if(target.isHuman){
+    offerJustSayNo(
+      collector.name + " doubled the rent! Additional $" + amount + "M!",
+      function(){
+        G._afterPayment = function(){
+          aiCollectDoubleRentFromAll(collector, opponents, index + 1, amount, callback);
+        };
+        collectPayment(target, collector, amount);
+      },
+      function(){
+        addLog("Double Rent cancelled by Just Say No!");
+        aiCollectDoubleRentFromAll(collector, opponents, index + 1, amount, callback);
+      }
+    );
+  } else {
+    // AI opponent
+    offerJustSayNoToAI(target,
+      collector.name + " doubled the rent! Additional $" + amount + "M!",
+      function(){
+        autoPayment(target, collector, amount);
+        aiCollectDoubleRentFromAll(collector, opponents, index + 1, amount, callback);
+      },
+      function(){
+        addLog(target.name + " blocked Double Rent with Just Say No!");
+        aiCollectDoubleRentFromAll(collector, opponents, index + 1, amount, callback);
+      }
+    );
+  }
+}
+
+function aiDealBreaker(p, card, idx){
+  // Check ALL opponents for complete sets, not just human
+  var completeSets = [];
+  
+  for(var oi=0; oi<G.players.length; oi++){
+    var op = G.players[oi];
+    if(!op || op.id === p.id) continue;
+    if(!op.properties) continue;
+    
+    for(var c in op.properties){
+      if(!op.properties.hasOwnProperty(c)) continue;
+      if(isComplete(op, c)){
+        var value = PS[c].size * 5;
+        if(c === 'darkblue' || c === 'green') value += 10;
+        completeSets.push({color: c, victim: op, value: value});
+      }
+    }
+  }
+  
+  if(completeSets.length === 0){
+    if(!p.bank) p.bank = [];
+    var dbCard = p.hand.splice(idx,1)[0];
+    if(dbCard) p.bank.push(dbCard);
+    addLog(p.name+" banked Deal Breaker");
+    G.playsLeft--;
+    setTimeout(function(){aiPlay();}, 500);
+    return;
+  }
+  
+  // Prioritize highest-value sets
+  completeSets.sort(function(a, b){ return b.value - a.value; });
+  var best = completeSets[0];
+  var bestSet = best.color;
+  var victim = best.victim;
+  
+  var doSteal = function(){
+    if(!victim.properties[bestSet] || victim.properties[bestSet].length === 0){
+      addLog("Set couldn't be stolen!");
+      p.hand.splice(idx,1); G.discard.push(card); G.playsLeft--;
+      setTimeout(function(){aiPlay();}, 800);
+      return;
+    }
+    if(!p.properties) p.properties = {};
+    if(!p.properties[bestSet]) p.properties[bestSet] = [];
+    while(victim.properties[bestSet].length > 0){
+      var stolen = victim.properties[bestSet].pop();
+      if(stolen) p.properties[bestSet].push(stolen);
+    }
+    addLog(p.name+" stole "+victim.name+"'s entire "+PS[bestSet].name+" set!");
+    addMove(p.name, "Stole complete "+PS[bestSet].name+" set from "+victim.name, false);
+    delete victim.properties[bestSet];
+    p.hand.splice(idx,1); G.discard.push(card); G.playsLeft--;
+    if(checkWin(p)) return;
+    setTimeout(function(){aiPlay();}, 800);
+  };
+  
+  var cancelSteal = function(){
+    addLog(victim.name+" blocked Deal Breaker with Just Say No!");
+    p.hand.splice(idx,1); G.discard.push(card); G.playsLeft--;
+    setTimeout(function(){aiPlay();}, 800);
+  };
+  
+  if(victim.isHuman){
+    offerJustSayNo(
+      p.name+" is using Deal Breaker to steal your "+PS[bestSet].name+" set!",
+      doSteal, cancelSteal
+    );
+  } else {
+    offerJustSayNoToAI(victim,
+      p.name+" used Deal Breaker on "+victim.name+"'s "+PS[bestSet].name+" set!",
+      doSteal, cancelSteal
+    );
+  }
+}
+
+function aiForcedDeal(p, card, idx){
+  try {
+    if(!p || !card || idx === undefined){
+      console.error("Invalid parameters in aiForcedDeal");
+      setTimeout(function(){aiPlay();}, 800);
+      return;
+    }
+    if(!p.hand || !p.hand[idx]){
+      console.error("Invalid hand or index");
+      setTimeout(function(){aiPlay();}, 800);
+      return;
+    }
+    if(!p.properties) p.properties = {};
+    
+    // Find my tradeable properties (from incomplete sets only)
+    var myTradeable = [];
+    for(var c in p.properties){
+      if(!p.properties.hasOwnProperty(c)) continue;
+      if(!p.properties[c] || !Array.isArray(p.properties[c])) continue;
+      if(p.properties[c].length === 0) continue;
+      if(!PS[c]) continue;
+      if(isComplete(p, c)) continue;
+      // Must have actual property cards (not just buildings)
+      var hasProp = false;
+      for(var pi=0; pi<p.properties[c].length; pi++){
+        if(p.properties[c][pi] && !p.properties[c][pi]._house && !p.properties[c][pi]._hotel){ hasProp = true; break; }
+      }
+      if(hasProp) myTradeable.push(c);
+    }
+    
+    // Find stealable properties from ALL opponents (incomplete sets only)
+    var opStealable = [];
+    for(var oi=0; oi<G.players.length; oi++){
+      var op = G.players[oi];
+      if(!op || op.id === p.id) continue;
+      if(!op.properties) continue;
+      for(var c2 in op.properties){
+        if(!op.properties.hasOwnProperty(c2)) continue;
+        if(!op.properties[c2] || !Array.isArray(op.properties[c2])) continue;
+        if(op.properties[c2].length === 0) continue;
+        if(!PS[c2]) continue;
+        if(isComplete(op, c2)) continue;
+        var hasProp2 = false;
+        for(var pi2=0; pi2<op.properties[c2].length; pi2++){
+          if(op.properties[c2][pi2] && !op.properties[c2][pi2]._house && !op.properties[c2][pi2]._hotel){ hasProp2 = true; break; }
+        }
+        if(hasProp2){
+          var priority = 0;
+          // Prioritize colors AI needs
+          if(p.properties[c2]){
+            var cnt = 0;
+            for(var qi=0; qi<p.properties[c2].length; qi++){
+              if(p.properties[c2][qi] && !p.properties[c2][qi]._house && !p.properties[c2][qi]._hotel) cnt++;
+            }
+            if(cnt === (PS[c2].size || 3) - 1) priority = 100;
+            else if(cnt > 0) priority = 50;
+          }
+          opStealable.push({color: c2, victim: op, priority: priority});
+        }
+      }
+    }
+    
+    if(opStealable.length === 0 || myTradeable.length === 0){
+      if(!p.bank) p.bank = [];
+      var fdCard = p.hand.splice(idx,1)[0];
+      if(fdCard) p.bank.push(fdCard);
+      addLog(p.name+" banked Forced Deal");
+      G.playsLeft--;
+      setTimeout(function(){aiPlay();}, 500);
+      return;
+    }
+    
+    // Sort by priority and pick best steal
+    opStealable.sort(function(a, b){ return b.priority - a.priority; });
+    var bestSteal = opStealable[0];
+    var victim = bestSteal.victim;
+    var oppColor = bestSteal.color;
+    var myColor = myTradeable[Math.floor(Math.random()*myTradeable.length)];
+    
+    if(!myColor || !oppColor || !PS[myColor] || !PS[oppColor]){
+      if(!p.bank) p.bank = [];
+      var fdCard2 = p.hand.splice(idx,1)[0];
+      if(fdCard2) p.bank.push(fdCard2);
+      addLog(p.name+" banked Forced Deal");
+      G.playsLeft--;
+      setTimeout(function(){aiPlay();}, 500);
+      return;
+    }
+    
+    var discardedCard = p.hand.splice(idx,1)[0];
+    if(discardedCard) G.discard.push(discardedCard);
+    G.playsLeft--;
+    
+    var doSwap = function(){
+      executeForcedDealSwap(p, victim, myColor, oppColor);
+      setTimeout(function(){aiPlay();}, 800);
+    };
+    
+    var cancelSwap = function(){
+      addLog(victim.name+" blocked Forced Deal with Just Say No!");
+      setTimeout(function(){aiPlay();}, 800);
+    };
+    
+    if(victim.isHuman){
+      offerJustSayNo(
+        p.name+" wants to swap "+PS[myColor].name+" for your "+PS[oppColor].name+"!",
+        doSwap, cancelSwap
+      );
+    } else {
+      offerJustSayNoToAI(victim,
+        p.name+" used Forced Deal on "+victim.name+"!",
+        doSwap, cancelSwap
+      );
+    }
+  } catch(e) {
+    console.error("Error in aiForcedDeal:", e);
+    setTimeout(function(){aiPlay();}, 800);
+  }
+}
+
+function aiHouse(p, card, idx){
+  try {
+    // Find complete sets without house/hotel
+    if(!p || !p.properties){
+      // Can't place house, bank it
+      if(!p.bank) p.bank = [];
+      var houseCard = p.hand.splice(idx,1)[0];
+      if(houseCard) p.bank.push(houseCard);
+      addLog(p.name+" banked a House");
+      G.playsLeft--;
+      // NOTE: No setTimeout(aiPlay) here - called inline from aiPlay loop which handles continuation
+      return;
+    }
+    
+    var validSets = [];
+    for(var c in p.properties){
+      if(!p.properties.hasOwnProperty(c)) continue;
+      if(!p.properties[c] || !Array.isArray(p.properties[c])) continue;
+      if(c === 'railroad' || c === 'utility') continue;
+      if(!isComplete(p, c)) continue;
+      
+      var hasHouse = false;
+      var hasHotel = false;
+      for(var i=0; i<p.properties[c].length; i++){
+        var propCard = p.properties[c][i];
+        if(!propCard) continue;
+        if(propCard._house) hasHouse = true;
+        if(propCard._hotel) hasHotel = true;
+      }
+      
+      if(!hasHouse && !hasHotel) validSets.push(c);
+    }
+    
+    if(validSets.length === 0){
+      // No valid sets, bank it
+      if(!p.bank) p.bank = [];
+      var houseCard2 = p.hand.splice(idx,1)[0];
+      if(houseCard2) p.bank.push(houseCard2);
+      addLog(p.name+" banked a House");
+      G.playsLeft--;
+      return;
+    }
+    
+    // Add house to first valid set (or prioritize high-rent)
+    var color = validSets[0];
+    if(!p.properties[color]) p.properties[color] = [];
+    
+    // Use the actual house card from hand
+    var houseCard3 = p.hand.splice(idx,1)[0];
+    if(houseCard3){
+      houseCard3._house = true;
+      p.properties[color].push(houseCard3);
+    }
+    
+    if(PS[color]){
+      addLog(p.name+" added a house to "+PS[color].name+"!");
+      addMove(p.name, "Added House to "+PS[color].name, false);
+    } else {
+      addLog(p.name+" added a house!");
+      addMove(p.name, "Added House", false);
+    }
+    G.playsLeft--;
+  } catch(e) {
+    console.error("Error in aiHouse:", e);
+    // Don't schedule aiPlay - the loop handles it
+  }
+}
+
+function aiHotel(p, card, idx){
+  try {
+    // Find complete sets with house but no hotel
+    if(!p || !p.properties){
+      // Can't place hotel, bank it
+      if(!p.bank) p.bank = [];
+      var hotelCard = p.hand.splice(idx,1)[0];
+      if(hotelCard) p.bank.push(hotelCard);
+      addLog(p.name+" banked a Hotel");
+      G.playsLeft--;
+      // NOTE: No setTimeout(aiPlay) here - called inline from aiPlay loop which handles continuation
+      return;
+    }
+    
+    var validSets = [];
+    for(var c in p.properties){
+      if(!p.properties.hasOwnProperty(c)) continue;
+      if(!p.properties[c] || !Array.isArray(p.properties[c])) continue;
+      if(c === 'railroad' || c === 'utility') continue;
+      if(!isComplete(p, c)) continue;
+      
+      var hasHouse = false;
+      var hasHotel = false;
+      for(var i=0; i<p.properties[c].length; i++){
+        var propCard = p.properties[c][i];
+        if(!propCard) continue;
+        if(propCard._house) hasHouse = true;
+        if(propCard._hotel) hasHotel = true;
+      }
+      
+      if(hasHouse && !hasHotel) validSets.push(c);
+    }
+    
+    if(validSets.length === 0){
+      // No valid sets, bank it
+      if(!p.bank) p.bank = [];
+      var hotelCard2 = p.hand.splice(idx,1)[0];
+      if(hotelCard2) p.bank.push(hotelCard2);
+      addLog(p.name+" banked a Hotel");
+      G.playsLeft--;
+      return;
+    }
+    
+    // Add hotel to first valid set
+    var color = validSets[0];
+    if(!p.properties[color]) p.properties[color] = [];
+    
+    // Use the actual hotel card from hand
+    var hotelCard3 = p.hand.splice(idx,1)[0];
+    if(hotelCard3){
+      hotelCard3._hotel = true;
+      p.properties[color].push(hotelCard3);
+    }
+    
+    if(PS[color]){
+      addLog(p.name+" added a hotel to "+PS[color].name+"!");
+      addMove(p.name, "Added Hotel to "+PS[color].name, false);
+    } else {
+      addLog(p.name+" added a hotel!");
+      addMove(p.name, "Added Hotel", false);
+    }
+    G.playsLeft--;
+  } catch(e) {
+    console.error("Error in aiHotel:", e);
+    // Don't schedule aiPlay - the loop handles it
+  }
+}
+
+function isComplete(player, color){
+  if(!player || !player.properties || !player.properties[color]) return false;
+  if(!Array.isArray(player.properties[color])) return false;
+  if(!PS[color]) return false;
+  
+  var count = 0;
+  var hasStandard = false;
+  
+  for(var i=0; i<player.properties[color].length; i++){
+    var card = player.properties[color][i];
+    if(!card) continue; // Skip undefined/null entries
+    
+    if(card._hotel){
+      // Hotels don't count toward property count
+    } else if(card._house){
+      // Houses don't count toward property count
+    } else {
+      count++;
+      // Check if this is a standard property (not wild)
+      if(card.colors && card.colors.length === 1){
+        hasStandard = true;
+      }
+    }
+  }
+  
+  // Must have at least one standard property to complete set
+  if(!hasStandard)return false;
+  
+  return count >= PS[color].size;
+}
+
+function countComplete(player){
+  var count = 0;
+  for(var c in player.properties){
+    if(player.properties.hasOwnProperty(c) && isComplete(player,c))count++;
+  }
+  return count;
+}
+
+function checkWin(player){
+  if(countComplete(player) >= 3){
+    // If it's not the player's turn, set a flag but don't trigger win yet
+    if(player.id !== G.currentPlayer){
+      player._hasWon = true;
+      addLog(player.name+" has 3 complete sets but must wait for their turn to win!");
+      return false;
+    }
+    showWinnerScreen(player);
+    return true;
+  }
+  return false;
+}
+
+function checkPendingWin(){
+  // Check ALL players for win condition at each turn start.
+  // This catches: 1) players who gained 3 sets via payment (no explicit checkWin call),
+  // 2) stale _hasWon flags from players who lost sets since being flagged.
+  for(var i=0; i<G.players.length; i++){
+    var p = G.players[i];
+    if(countComplete(p) >= 3){
+      if(p.id === G.currentPlayer){
+        // It's their turn and they have 3 sets - win now
+        showWinnerScreen(p);
+        return true;
+      }
+      // Not their turn - flag for when their turn comes
+      p._hasWon = true;
+    } else {
+      // Clear stale flag (player lost sets since flag was set)
+      p._hasWon = false;
+    }
+  }
+  return false;
+}
+
+function showWinnerScreen(player){
+  document.getElementById('winner-name').textContent = player.name + " wins!";
+  showScreen('winner-screen');
+}
+
+function bankVal(player){
+  if(!player || !player.bank || !Array.isArray(player.bank)) return 0;
+  
+  var v = 0;
+  for(var i=0; i<player.bank.length; i++){
+    var card = player.bank[i];
+    if(!card) continue;
+    v += card.value || 0;
+  }
+  return v;
+}
+
+function calculateRent(player, color){
+  if(!player || !player.properties || !player.properties[color]){
+    console.log("calculateRent: No properties for", color);
+    return 0;
+  }
+  if(!Array.isArray(player.properties[color])){
+    console.error("calculateRent: properties[color] is not an array for", color);
+    return 0;
+  }
+  
+  var cards = player.properties[color];
+  var propCount = 0;
+  var hasHouse = false;
+  var hasHotel = false;
+  
+  for(var i=0; i<cards.length; i++){
+    var card = cards[i];
+    if(!card) continue;
+    if(card._house)hasHouse = true;
+    else if(card._hotel)hasHotel = true;
+    else propCount++;
+  }
+  
+  if(propCount === 0){
+    return 0;
+  }
+  
+  var rentValues = RENT_VALUES[color];
+  if(!rentValues){
+    return 0;
+  }
+  
+  var index = Math.min(propCount, rentValues.length) - 1;
+  
+  var baseRent = rentValues[index] || 0;
+  
+  // Add house and hotel bonuses (only for non-railroad/utility)
+  if(color !== 'railroad' && color !== 'utility'){
+    if(hasHouse)baseRent += 3;
+    if(hasHotel)baseRent += 4;
+  }
+  
+  return baseRent;
+}
+
+function collectRentFromOpponents(rent){
+  if(!rent || rent <= 0) return;
+  
+  var p = G.players[0];
+  if(!p) return;
+  
+  // Store rent collection state
+  G._rentCollection = {
+    rent: rent,
+    playerIndex: 1, // Start with first opponent
+    collector: p
+  };
+  
+  collectRentFromNextPlayer();
+}
+
+function collectRentFromNextPlayer(){
+  var rc = G._rentCollection;
+  if(!rc) return;
+  
+  // Validate G.players exists
+  if(!G.players || !Array.isArray(G.players)){
+    delete G._rentCollection;
+    return;
+  }
+  
+  // If we've collected from all opponents, we're done
+  if(rc.playerIndex >= G.players.length){
+    delete G._rentCollection;
+    render(); // Show final result
+    return;
+  }
+  
+  var op = G.players[rc.playerIndex];
+  if(!op){
+    // Skip invalid player
+    rc.playerIndex++;
+    collectRentFromNextPlayer();
+    return;
+  }
+  
+  // For AI players, offer JSN then collect
+  if(!op.isHuman){
+    offerJustSayNoToAI(op,
+      rc.collector.name + " charged $" + rc.rent + "M rent!",
+      function(){
+        // AI didn't block - track that they paid
+        if(G._lastRentPaidBy) G._lastRentPaidBy.push(op.id);
+        collectPayment(op, rc.collector, rc.rent);
+        rc.playerIndex++;
+        collectRentFromNextPlayer();
+      },
+      function(){
+        // AI used JSN
+        addLog(op.name + " blocked rent with Just Say No!");
+        rc.playerIndex++;
+        collectRentFromNextPlayer();
+      }
+    );
+  } else {
+    // Offer Just Say No to human player
+    var collectorName = rc.collector ? rc.collector.name : "Player";
+    offerJustSayNo(
+      collectorName + " is charging you $" + rc.rent + "M rent!",
+      function(){
+        // Declined Just Say No - must pay; track that they paid
+        if(G._lastRentPaidBy) G._lastRentPaidBy.push(op.id);
+        collectPayment(op, rc.collector, rc.rent);
+      },
+      function(){
+        // Used Just Say No - skip payment
+        addLog("Rent cancelled by Just Say No!");
+        rc.playerIndex++;
+        collectRentFromNextPlayer();
+      }
+    );
+  }
+}
+
+function collectPayment(fromPlayer, toPlayer, amount){
+  if(!fromPlayer || !toPlayer || !amount) return;
+  
+  // If it's the human player being charged, show payment UI
+  if(fromPlayer.isHuman && fromPlayer.id === 0){
+    showPaymentUI(fromPlayer, toPlayer, amount);
+  } else {
+    // AI pays automatically
+    autoPayment(fromPlayer, toPlayer, amount);
+  }
+}
+
+function autoPayment(fromPlayer, toPlayer, amount){
+  if(!fromPlayer || !toPlayer || !amount) return;
+  
+  var paid = 0;
+  var owed = amount;
+  var propsReceived = []; // Track for notification
+  
+  // Initialize bank if missing
+  if(!fromPlayer.bank) fromPlayer.bank = [];
+  if(!toPlayer.bank) toPlayer.bank = [];
+  
+  // Pay from bank first (smallest cards first to minimize overpayment)
+  var bankByValue = fromPlayer.bank.slice().sort(function(a,b){ return (a.value||0) - (b.value||0); });
+  while(paid < owed && bankByValue.length > 0){
+    var bankCard = bankByValue.shift();
+    if(!bankCard) continue;
+    var bankIdx = fromPlayer.bank.indexOf(bankCard);
+    if(bankIdx === -1) continue;
+    fromPlayer.bank.splice(bankIdx, 1);
+    toPlayer.bank.push(bankCard);
+    paid += bankCard.value || 0;
+  }
+  
+  // If still owe, pay with properties from INCOMPLETE sets first
+  if(paid < owed && fromPlayer.properties){
+    // First pass: incomplete sets
+    for(var c in fromPlayer.properties){
+      if(!fromPlayer.properties.hasOwnProperty(c))continue;
+      if(!fromPlayer.properties[c] || !Array.isArray(fromPlayer.properties[c])) continue;
+      if(isComplete(fromPlayer, c)) continue; // Skip complete sets first
+      
+      while(paid < owed && fromPlayer.properties[c] && fromPlayer.properties[c].length > 0){
+        // Find a property (not house/hotel, not $0 value multi-color wilds)
+        var propIdx = -1;
+        for(var pi=fromPlayer.properties[c].length-1; pi>=0; pi--){
+          var pc = fromPlayer.properties[c][pi];
+          if(pc && !pc._house && !pc._hotel && (pc.value || 0) > 0){ propIdx = pi; break; }
+        }
+        if(propIdx === -1) break;
+        
+        var prop = fromPlayer.properties[c].splice(propIdx, 1)[0];
+        if(!prop) continue;
+        
+        // Properties paid go to receiver's property collection (official rule)
+        var propColor = (prop._chosenColor || (prop.colors && prop.colors.length === 1 ? prop.colors[0] : c));
+        if(!toPlayer.properties) toPlayer.properties = {};
+        if(!toPlayer.properties[propColor]) toPlayer.properties[propColor] = [];
+        toPlayer.properties[propColor].push(prop);
+        paid += prop.value || 0;
+        if(toPlayer.isHuman) propsReceived.push(prop.name);
+        
+        if(fromPlayer.properties[c] && fromPlayer.properties[c].length === 0)delete fromPlayer.properties[c];
+      }
+      if(paid >= owed)break;
+    }
+    
+    // Second pass: complete sets (if still owe)
+    if(paid < owed){
+      for(var c2 in fromPlayer.properties){
+        if(!fromPlayer.properties.hasOwnProperty(c2))continue;
+        if(!fromPlayer.properties[c2] || !Array.isArray(fromPlayer.properties[c2])) continue;
+        
+        while(paid < owed && fromPlayer.properties[c2] && fromPlayer.properties[c2].length > 0){
+          var propIdx2 = -1;
+          for(var pi2=fromPlayer.properties[c2].length-1; pi2>=0; pi2--){
+            var pc2 = fromPlayer.properties[c2][pi2];
+            if(pc2 && !pc2._house && !pc2._hotel && (pc2.value || 0) > 0){ propIdx2 = pi2; break; }
+          }
+          if(propIdx2 === -1) break;
+          
+          // Check completeness BEFORE removing
+          var wasComplete2 = isComplete(fromPlayer, c2);
+          
+          var prop2 = fromPlayer.properties[c2].splice(propIdx2, 1)[0];
+          if(!prop2) continue;
+          
+          // Properties go to receiver's property collection
+          var propColor2 = (prop2._chosenColor || (prop2.colors && prop2.colors.length === 1 ? prop2.colors[0] : c2));
+          if(!toPlayer.properties) toPlayer.properties = {};
+          if(!toPlayer.properties[propColor2]) toPlayer.properties[propColor2] = [];
+          toPlayer.properties[propColor2].push(prop2);
+          paid += prop2.value || 0;
+          if(toPlayer.isHuman) propsReceived.push(prop2.name);
+          
+          // If set was complete and now isn't, handle orphaned houses/hotels
+          if(wasComplete2 && !isComplete(fromPlayer, c2) && fromPlayer.properties[c2]){
+            for(var bi=fromPlayer.properties[c2].length-1; bi>=0; bi--){
+              var bc = fromPlayer.properties[c2][bi];
+              if(bc && (bc._house || bc._hotel)){
+                fromPlayer.properties[c2].splice(bi, 1);
+                // Houses/hotels go to receiver's bank (they can't go on properties without a set)
+                if(!toPlayer.bank) toPlayer.bank = [];
+                toPlayer.bank.push(bc);
+                paid += bc.value || 0;
+              }
+            }
+          }
+          
+          if(fromPlayer.properties[c2] && fromPlayer.properties[c2].length === 0)delete fromPlayer.properties[c2];
+        }
+        if(paid >= owed)break;
+      }
+    }
+  }
+  
+  if(paid > 0 && fromPlayer.name){
+    addLog(fromPlayer.name+" paid $"+paid+"M");
+    if(propsReceived.length > 0){
+      toast("📥 "+fromPlayer.name+" paid you: "+propsReceived.join(", "));
+      addLog("You received: "+propsReceived.join(", "));
+    }
+  }
+}
+
+function showPaymentUI(fromPlayer, toPlayer, amount){
+  try {
+    if(!fromPlayer || !toPlayer || !amount){
+      console.error("Invalid payment parameters");
+      return;
+    }
+    
+    var p = fromPlayer;
+    
+    // Initialize properties if missing
+    if(!p.bank) p.bank = [];
+    if(!p.properties) p.properties = {};
+    
+    // Calculate total available
+    var bankTotal = bankVal(p);
+    var propertyTotal = 0;
+    for(var c in p.properties){
+      if(!p.properties.hasOwnProperty(c))continue;
+      if(!p.properties[c] || !Array.isArray(p.properties[c])) continue;
+      
+      for(var i=0; i<p.properties[c].length; i++){
+        var card = p.properties[c][i];
+        if(!card) continue;
+        propertyTotal += card.value || 0;
+      }
+    }
+    
+    var total = bankTotal + propertyTotal;
+    
+    if(total === 0){
+      toast("You have nothing to pay with!");
+      continueAfterPayment();
+      return;
+    }
+    
+    G._payment = {
+      from: fromPlayer,
+      to: toPlayer,
+      owed: amount,
+      selected: [],
+      totalSelected: 0,
+      bank: p.bank, // Reference to bank for Select All
+      properties: p.properties // Reference to properties for Select All
+    };
+    
+    var h = '<div class="modal-title">Pay $'+amount+'M</div>';
+    h += '<div class="modal-text">Select cards to pay with (no change given)</div>';
+    h += '<div id="payment-selected" style="margin:10px 0;padding:8px;background:var(--bg);border-radius:6px;min-height:30px;font-size:0.7rem;color:var(--gold)">Selected: $0M / $'+amount+'M</div>';
+    
+    // Show bank cards
+    if(p.bank.length > 0){
+      h += '<div class="board-section-title">From Bank ($'+bankTotal+'M)</div>';
+      h += '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:10px">';
+      for(var i=0; i<p.bank.length; i++){
+        var bankCard = p.bank[i];
+        if(!bankCard) continue;
+        var cardId = 'bank-'+i;
+        h += '<div data-card-id="'+cardId+'" onclick="togglePaymentCard(\'bank\','+i+')">'+cardHTML(bankCard)+'</div>';
+      }
+      h += '</div>';
+    }
+    
+    // Show properties
+    if(Object.keys(p.properties).length > 0){
+      h += '<div class="board-section-title">From Properties</div>';
+      for(var c in p.properties){
+        if(!p.properties.hasOwnProperty(c))continue;
+        if(!p.properties[c] || !Array.isArray(p.properties[c])) continue;
+        if(!PS[c]) continue;
+        
+        h += '<div style="margin-bottom:8px"><div style="font-size:0.6rem;font-weight:700;color:'+PS[c].color+';margin-bottom:3px">'+PS[c].name+'</div>';
+        h += '<div style="display:flex;gap:3px;flex-wrap:wrap">';
+        for(var j=0; j<p.properties[c].length; j++){
+          var card = p.properties[c][j];
+          if(!card) continue;
+          // Skip houses, hotels, and multicolor wilds (value = 0)
+          if(!card._house && !card._hotel && (card.value || 0) > 0){
+            var cardId = c+'-'+j;
+            h += '<div data-card-id="'+cardId+'" onclick="togglePaymentCard(\''+c+'\','+j+')">'+cardHTML(card)+'</div>';
+          }
+        }
+        h += '</div></div>';
+      }
+    }
+    
+    h += '<div class="modal-btns" style="margin-top:10px;gap:6px">';
+    
+    // Calculate if player can afford the full amount
+    var totalAvailable = 0;
+    for(var i=0; i<p.bank.length; i++){
+      var bankCard = p.bank[i];
+      if(!bankCard) continue;
+      totalAvailable += bankCard.value || 0;
+    }
+    for(var c in p.properties){
+      if(!p.properties.hasOwnProperty(c))continue;
+      if(!p.properties[c] || !Array.isArray(p.properties[c])) continue;
+      
+      for(var j=0; j<p.properties[c].length; j++){
+        var card = p.properties[c][j];
+        if(!card) continue;
+        if(!card._house && !card._hotel && (card.value || 0) > 0){
+          totalAvailable += card.value;
+        }
+      }
+    }
+    
+    // Show "Select All" button if they can't afford it
+    if(totalAvailable < amount){
+      h += '<button class="modal-btn" style="background:var(--red);color:#fff;flex:1" onclick="selectAllPayment()">Select All ($'+totalAvailable+'M)</button>';
+    }
+    
+    h += '<button class="modal-btn" style="background:var(--green);color:#fff;flex:2" onclick="confirmPayment()">Confirm Payment</button>';
+    h += '</div>';
+    
+    showModal(h);
+  } catch(e) {
+    console.error("Error in showPaymentUI:", e);
+    toast("Error showing payment!");
+  }
+}
+
+function togglePaymentCard(location, index){
+  var p = G._payment;
+  if(!p)return;
+  
+  var card;
+  if(location === 'bank'){
+    card = G.players[0].bank[index];
+  } else {
+    card = G.players[0].properties[location][index];
+  }
+  
+  var cardId = location + '-' + index;
+  var existingIndex = -1;
+  for(var i=0; i<p.selected.length; i++){
+    if(p.selected[i].id === cardId){
+      existingIndex = i;
+      break;
+    }
+  }
+  
+  if(existingIndex !== -1){
+    // Deselect
+    p.totalSelected -= p.selected[existingIndex].value;
+    p.selected.splice(existingIndex, 1);
+  } else {
+    // Select
+    p.selected.push({
+      id: cardId,
+      location: location,
+      index: index,
+      card: card,
+      value: card.value || 0
+    });
+    p.totalSelected += card.value || 0;
+  }
+  
+  // Update display
+  document.getElementById('payment-selected').innerHTML = 'Selected: $'+p.totalSelected+'M / $'+p.owed+'M';
+  
+  // Visual feedback - add selected class to wrapper divs
+  var allWrappers = document.querySelectorAll('#modal-overlay [data-card-id]');
+  allWrappers.forEach(function(el){el.classList.remove('payment-selected');});
+  
+  for(var j=0; j<p.selected.length; j++){
+    var sel = p.selected[j];
+    // Find and highlight the wrapper by data attribute
+    allWrappers.forEach(function(el){
+      var cardLoc = el.getAttribute('data-card-id');
+      if(cardLoc === sel.id){
+        el.classList.add('payment-selected');
+      }
+    });
+  }
+}
+
+function selectAllPayment(){
+  var p = G._payment;
+  if(!p)return;
+  
+  // Clear current selection
+  p.selected = [];
+  p.totalSelected = 0;
+  
+  // Select all bank cards
+  for(var i=0; i<p.bank.length; i++){
+    var card = p.bank[i];
+    p.selected.push({
+      id: 'bank-'+i,
+      location: 'bank',
+      index: i,
+      card: card,
+      value: card.value || 0
+    });
+    p.totalSelected += card.value || 0;
+  }
+  
+  // Select all property cards (excluding houses/hotels and multicolor wilds)
+  for(var c in p.properties){
+    if(!p.properties.hasOwnProperty(c))continue;
+    for(var j=0; j<p.properties[c].length; j++){
+      var card = p.properties[c][j];
+      if(!card._house && !card._hotel && (card.value || 0) > 0){
+        p.selected.push({
+          id: c+'-'+j,
+          location: c,
+          index: j,
+          card: card,
+          value: card.value || 0
+        });
+        p.totalSelected += card.value || 0;
+      }
+    }
+  }
+  
+  // Update display
+  document.getElementById('payment-selected').innerHTML = 'Selected: $'+p.totalSelected+'M / $'+p.owed+'M';
+  
+  // Visual feedback
+  var allWrappers = document.querySelectorAll('#modal-overlay [data-card-id]');
+  allWrappers.forEach(function(el){el.classList.add('payment-selected');});
+}
+
+function confirmPayment(){
+  try{
+    var p = G._payment;
+    if(!p)return;
+    
+    var fromPlayer = p.from;
+    if(!fromPlayer){
+      console.error('No fromPlayer in payment');
+      hideModal();
+      return;
+    }
+  
+  // Calculate total value of everything the player has
+  var totalAvailable = 0;
+  for(var i=0; i<fromPlayer.bank.length; i++){
+    var bankCard = fromPlayer.bank[i];
+    if(!bankCard) continue;
+    totalAvailable += bankCard.value || 0;
+  }
+  for(var c in fromPlayer.properties){
+    if(!fromPlayer.properties.hasOwnProperty(c))continue;
+    for(var j=0; j<fromPlayer.properties[c].length; j++){
+      var card = fromPlayer.properties[c][j];
+      if(!card) continue; // Skip null/undefined
+      if(!card._house && !card._hotel && (card.value || 0) > 0){
+        totalAvailable += card.value;
+      }
+    }
+  }
+  
+  // Check if payment is valid
+  // Must either: pay the full amount, OR pay everything you have
+  if(p.totalSelected < p.owed && p.totalSelected < totalAvailable){
+    toast("You must pay $"+p.owed+"M or select everything you have!\n\nYou have: $"+totalAvailable+"M available\nSelected: $"+p.totalSelected+"M");
+    return;
+  }
+  
+  hideModal();
+  
+  // Transfer selected cards
+  var toPlayer = p.to;
+  
+  // Sort by location to avoid index issues (process properties first, then bank)
+  var bankCards = [];
+  var propCards = {};
+  
+  for(var i=0; i<p.selected.length; i++){
+    var sel = p.selected[i];
+    if(sel.location === 'bank'){
+      bankCards.push(sel.index);
+    } else {
+      if(!propCards[sel.location])propCards[sel.location] = [];
+      propCards[sel.location].push(sel.index);
+    }
+  }
+  
+  // Remove property cards (in reverse order to maintain indices)
+  for(var color in propCards){
+    propCards[color].sort(function(a,b){return b-a;});
+    for(var j=0; j<propCards[color].length; j++){
+      var idx = propCards[color][j];
+      
+      // Check completeness BEFORE removal
+      var wasComplete = isComplete(fromPlayer, color);
+      var hasHouseInSet = false;
+      var hasHotelInSet = false;
+      
+      if(fromPlayer.properties[color]){
+        for(var k=0; k<fromPlayer.properties[color].length; k++){
+          var propCard = fromPlayer.properties[color][k];
+          if(!propCard) continue;
+          if(propCard._house)hasHouseInSet = true;
+          if(propCard._hotel)hasHotelInSet = true;
+        }
+      }
+      
+      var card = fromPlayer.properties[color].splice(idx, 1)[0];
+      
+      // If paying from a complete set that has house/hotel, transfer them
+      if(wasComplete && (hasHouseInSet || hasHotelInSet)){
+        // Check if receiver has a monopoly of this color
+        if(toPlayer.properties[color] && isComplete(toPlayer, color)){
+          // Transfer house/hotel to receiver's monopoly
+          if(hasHouseInSet){
+            var houseIdx = -1;
+            for(var m=0; m<fromPlayer.properties[color].length; m++){
+              var propCard = fromPlayer.properties[color][m];
+              if(!propCard) continue;
+              if(propCard._house){
+                houseIdx = m;
+                break;
+              }
+            }
+            if(houseIdx !== -1){
+              var house = fromPlayer.properties[color].splice(houseIdx, 1)[0];
+              toPlayer.properties[color].push(house);
+              addLog("House transferred with property!");
+            }
+          }
+          if(hasHotelInSet){
+            var hotelIdx = -1;
+            for(var n=0; n<fromPlayer.properties[color].length; n++){
+              var propCard = fromPlayer.properties[color][n];
+              if(!propCard) continue;
+              if(propCard._hotel){
+                hotelIdx = n;
+                break;
+              }
+            }
+            if(hotelIdx !== -1){
+              var hotel = fromPlayer.properties[color].splice(hotelIdx, 1)[0];
+              toPlayer.properties[color].push(hotel);
+              addLog("Hotel transferred with property!");
+            }
+          }
+        } else {
+          // Receiver doesn't have monopoly - house/hotel goes to their bank
+          if(hasHouseInSet){
+            var hIdx = -1;
+            for(var p1=0; p1<fromPlayer.properties[color].length; p1++){
+              var propCard = fromPlayer.properties[color][p1];
+              if(!propCard) continue;
+              if(propCard._house){
+                hIdx = p1;
+                break;
+              }
+            }
+            if(hIdx !== -1){
+              var h = fromPlayer.properties[color].splice(hIdx, 1)[0];
+              if(h){
+                // Transfer the actual house card to bank (preserves value)
+                toPlayer.bank.push(h);
+                addLog("House became $3M in bank");
+              }
+            }
+          }
+          if(hasHotelInSet){
+            var htIdx = -1;
+            for(var p2=0; p2<fromPlayer.properties[color].length; p2++){
+              var propCard = fromPlayer.properties[color][p2];
+              if(!propCard) continue;
+              if(propCard._hotel){
+                htIdx = p2;
+                break;
+              }
+            }
+            if(htIdx !== -1){
+              var ht = fromPlayer.properties[color].splice(htIdx, 1)[0];
+              if(ht){
+                // Transfer the actual hotel card to bank (preserves value)
+                toPlayer.bank.push(ht);
+                addLog("Hotel became $4M in bank");
+              }
+            }
+          }
+        }
+      }
+      
+      // Now transfer the actual property card
+      if(!toPlayer.properties[color])toPlayer.properties[color] = [];
+      toPlayer.properties[color].push(card);
+      
+      if(fromPlayer.properties[color] && fromPlayer.properties[color].length === 0)delete fromPlayer.properties[color];
+    }
+  }
+  
+  // Remove bank cards (in reverse order)
+  bankCards.sort(function(a,b){return b-a;});
+  for(var k=0; k<bankCards.length; k++){
+    var card = fromPlayer.bank.splice(bankCards[k], 1)[0];
+    toPlayer.bank.push(card);
+  }
+  
+  addLog("You paid $"+p.totalSelected+"M");
+  
+  delete G._payment;
+  
+  continueAfterPayment();
+  }catch(e){
+    console.error('confirmPayment error:', e);
+    toast('Payment error: '+e.message);
+    delete G._payment;
+    hideModal();
+    render();
+  }
+}
+
+function continueAfterPayment(){
+  render(); // Show payment result first
+  
+  // Continue with whatever was happening
+  if(G._afterPayment){
+    var fn = G._afterPayment;
+    delete G._afterPayment;
+    fn();
+  } else if(G._rentCollection){
+    G._rentCollection.playerIndex++;
+    collectRentFromNextPlayer();
+  } else {
+    render();
+  }
+}
+
+function showModal(html){
+  var modal = document.getElementById('modal');
+  var overlay = document.getElementById('modal-overlay');
+  if(!modal || !overlay) {
+    console.error('Modal elements not found');
+    return;
+  }
+  modal.innerHTML = html;
+  overlay.classList.add('active');
+}
+
+function hideModal(){
+  var overlay = document.getElementById('modal-overlay');
+  if(!overlay) return;
+  overlay.classList.remove('active');
+}
+
+function offerJustSayNo(actionName, onAccept, onDecline, chainPlayer){
+  try {
+    // Validate callbacks
+    if(typeof onAccept !== 'function'){
+      console.error("onAccept must be a function");
+      return;
+    }
+    
+    // chainPlayer: who is being asked (0 = human, 1+ = AI)
+    var targetPlayer = chainPlayer !== undefined ? chainPlayer : 0;
+    
+    if(!G.players || !G.players[targetPlayer]){
+      console.error("Invalid target player");
+      onAccept(); // Default to accepting
+      return;
+    }
+    
+    var p = G.players[targetPlayer];
+    if(!p.hand || !Array.isArray(p.hand)){
+      console.error("Invalid player hand");
+      onAccept();
+      return;
+    }
+    
+    // Check if player has Just Say No in hand
+    var hasJustNo = false;
+    var justNoIndex = -1;
+    
+    for(var i=0; i<p.hand.length; i++){
+      var card = p.hand[i];
+      if(!card) continue;
+      if(card.action === 'justno'){
+        hasJustNo = true;
+        justNoIndex = i;
+        break;
+      }
+    }
+    
+    if(!hasJustNo || !p.isHuman){
+      // No Just Say No available or AI player, accept the action
+      onAccept();
+      return;
+    }
+    
+    // Show modal asking if player wants to use Just Say No
+    var h = '<div class="modal-title">Just Say No?</div>';
+    h += '<div class="modal-text">'+actionName+'</div>';
+    h += '<div class="modal-text">Use Just Say No to cancel this action?</div>';
+    h += '<div class="modal-btns">';
+    h += '<button class="modal-btn" style="background:var(--red);color:#fff" onclick="useJustSayNo('+justNoIndex+','+targetPlayer+')">Use Just Say No</button>';
+    h += '<button class="modal-btn" style="background:var(--green);color:#fff" onclick="declineJustSayNo()">Let it happen</button>';
+    h += '</div>';
+    
+    G._justNoAccept = onAccept;
+    G._justNoDecline = onDecline;
+    G._justNoActionName = actionName;
+    
+    showModal(h);
+  } catch(e) {
+    console.error("Error in offerJustSayNo:", e);
+    if(onAccept) onAccept(); // Default to accepting on error
+  }
+}
+
+function useJustSayNo(cardIndex, playerIndex){
+  hideModal();
+  
+  if(!G.players || !G.players[playerIndex]){
+    console.error("Invalid player in useJustSayNo");
+    return;
+  }
+  
+  var p = G.players[playerIndex];
+  if(!p.hand || cardIndex < 0 || cardIndex >= p.hand.length){
+    console.error("Invalid card index in useJustSayNo");
+    return;
+  }
+  
+  var originalActionName = G._justNoActionName;
+  
+  // Discard the Just Say No card (doesn't count as a play)
+  var card = p.hand.splice(cardIndex, 1)[0];
+  if(card) G.discard.push(card);
+  
+  addLog(p.name+" played Just Say No!");
+  
+  // Now check if the ORIGINAL actor can counter with their own Just Say No
+  var originalActor = G.currentPlayer; // The person whose turn it is
+  var originalPlayer = G.players[originalActor];
+  
+  if(originalPlayer && !originalPlayer.isHuman){
+    // Original actor is AI - use AI JSN logic
+    offerJustSayNoToAI(originalPlayer,
+      p.name + " played Just Say No against " + originalPlayer.name + "!",
+      function(){
+        // AI chose not to counter (or doesn't have JSN) - JSN succeeds, action cancelled
+        toast("Action cancelled!");
+        if(G._justNoDecline)G._justNoDecline();
+        delete G._justNoAccept;
+        delete G._justNoDecline;
+        delete G._justNoActionName;
+        render();
+      },
+      function(){
+        // AI countered with Just Say No - action proceeds!
+        toast("Just Say No was countered! Action proceeds.");
+        if(G._justNoAccept)G._justNoAccept();
+        delete G._justNoAccept;
+        delete G._justNoDecline;
+        delete G._justNoActionName;
+      }
+    );
+  } else {
+    // Original actor is human - offer counter JSN to human
+    offerJustSayNo(
+      "Your Just Say No was countered! Counter back?",
+      function(){
+        // Original actor chose not to counter - Just Say No succeeds
+        toast("Action cancelled!");
+        if(G._justNoDecline)G._justNoDecline();
+        delete G._justNoAccept;
+        delete G._justNoDecline;
+        delete G._justNoActionName;
+        render();
+      },
+      function(){
+        // Original actor countered with another Just Say No - action proceeds!
+        toast("Just Say No was countered! Action proceeds.");
+        if(G._justNoAccept)G._justNoAccept();
+        delete G._justNoAccept;
+        delete G._justNoDecline;
+        delete G._justNoActionName;
+      },
+      originalActor
+    );
+  }
+}
+
+function declineJustSayNo(){
+  hideModal();
+  
+  if(G._justNoAccept)G._justNoAccept();
+  
+  delete G._justNoAccept;
+  delete G._justNoDecline;
+  delete G._justNoActionName;
+}
+
+// AI Just Say No decision
+function offerJustSayNoToAI(aiPlayer, actionDesc, onAccept, onDecline){
+  if(!aiPlayer || !aiPlayer.hand || aiPlayer.isHuman){
+    if(onAccept) onAccept();
+    return;
+  }
+  
+  // Check if AI has Just Say No
+  var justNoIndex = -1;
+  for(var i=0; i<aiPlayer.hand.length; i++){
+    if(aiPlayer.hand[i] && aiPlayer.hand[i].action === 'justno'){
+      justNoIndex = i;
+      break;
+    }
+  }
+  
+  if(justNoIndex === -1){
+    if(onAccept) onAccept();
+    return;
+  }
+  
+  // AI decision: use JSN based on difficulty and threat level
+  var useIt = false;
+  var diff = aiPlayer.difficulty;
+  
+  if(diff === 'Hard'){
+    // Hard AI: always uses JSN against high-value actions
+    useIt = true;
+  } else if(diff === 'Medium'){
+    // Medium AI: 60% chance to use JSN
+    useIt = Math.random() < 0.6;
+  } else {
+    // Easy AI: 25% chance to use JSN
+    useIt = Math.random() < 0.25;
+  }
+  
+  if(useIt){
+    var card = aiPlayer.hand.splice(justNoIndex, 1)[0];
+    if(card) G.discard.push(card);
+    addLog(aiPlayer.name+" played Just Say No!");
+    toast(aiPlayer.name+" says NO!");
+    
+    // Now offer the human a chance to counter with their own JSN
+    var humanHasJSN = false;
+    var humanJSNIdx = -1;
+    var human = G.players[0];
+    for(var i=0; i<human.hand.length; i++){
+      if(human.hand[i] && human.hand[i].action === 'justno'){
+        humanHasJSN = true;
+        humanJSNIdx = i;
+        break;
+      }
+    }
+    
+    if(humanHasJSN){
+      // Ask human if they want to counter
+      var h = '<div class="modal-title">Counter Just Say No?</div>';
+      h += '<div class="modal-text">'+aiPlayer.name+' blocked your action with Just Say No!</div>';
+      h += '<div class="modal-text">Use your Just Say No to counter?</div>';
+      h += '<div class="modal-btns">';
+      h += '<button class="modal-btn" style="background:var(--red);color:#fff" onclick="counterAIJustSayNo('+humanJSNIdx+')">Counter with Just Say No!</button>';
+      h += '<button class="modal-btn" style="background:var(--green);color:#fff" onclick="acceptAIJustSayNo()">Let it go</button>';
+      h += '</div>';
+      
+      G._aiJSNonAccept = onAccept;
+      G._aiJSNonDecline = onDecline;
+      
+      showModal(h);
+    } else {
+      // Human can't counter
+      if(onDecline) onDecline();
+    }
+  } else {
+    if(onAccept) onAccept();
+  }
+}
+
+function counterAIJustSayNo(cardIndex){
+  hideModal();
+  var human = G.players[0];
+  if(human.hand[cardIndex]){
+    var card = human.hand.splice(cardIndex, 1)[0];
+    if(card) G.discard.push(card);
+    addLog("You countered with Just Say No!");
+    toast("Counter successful! Action proceeds.");
+  }
+  if(G._aiJSNonAccept) G._aiJSNonAccept();
+  delete G._aiJSNonAccept;
+  delete G._aiJSNonDecline;
+}
+
+function acceptAIJustSayNo(){
+  hideModal();
+  if(G._aiJSNonDecline) G._aiJSNonDecline();
+  delete G._aiJSNonAccept;
+  delete G._aiJSNonDecline;
+}
+
+// RENT
+function playRent(card){
+  try{
+  if(!card){
+    console.error("No card in playRent");
+    return;
+  }
+  
+  var p = G.players[0];
+  if(!p || !p.properties) {
+    toast("No properties available!");
+    return;
+  }
+  
+  // Get available colors based on card type
+  var availableColors = [];
+  if(card.action === 'wildrent'){
+    // Wild rent: show all colors player actually has properties in
+    for(var color in p.properties){
+      if(!p.properties.hasOwnProperty(color)) continue;
+      if(!p.properties[color] || !Array.isArray(p.properties[color])) continue;
+      if(p.properties[color].length > 0 && PS[color]){
+        availableColors.push(color);
+      }
+    }
+  } else {
+    // Regular rent: check which colors from the card the player has properties in
+    if(!card.colors || !Array.isArray(card.colors)){
+      console.error("Rent card missing colors array:", card);
+      toast("Invalid rent card!");
+      G.sel = null;
+      render();
+      return;
+    }
+    
+    // Only include colors from the card that the player actually has
+    for(var i=0; i<card.colors.length; i++){
+      var c = card.colors[i];
+      if(!c || !PS[c]) continue;
+      if(p.properties[c] && Array.isArray(p.properties[c]) && p.properties[c].length > 0){
+        availableColors.push(c);
+      }
+    }
+  }
+  
+  if(availableColors.length === 0){
+    toast("You don't have any properties in the colors on this rent card!");
+    G.sel = null;
+    render();
+    return;
+  }
+  
+  var h = '<div class="modal-title">Choose Color to Rent</div><div class="modal-btns">';
+  var hasValidOptions = false;
+  
+  for(var i=0; i<availableColors.length; i++){
+    var c = availableColors[i];
+    if(!PS[c]){
+      console.warn("Invalid color in availableColors:", c);
+      continue;
+    }
+    
+    if(p.properties[c] && Array.isArray(p.properties[c]) && p.properties[c].length > 0){
+      var rent = calculateRent(p, c);
+      
+      if(rent > 0){
+        hasValidOptions = true;
+        h += '<button class="modal-btn" style="background:'+PS[c].color+';color:#fff" onclick="chargeRent(\''+c+'\')">'+PS[c].name+' ($'+rent+'M)</button>';
+      } else {
+        // Rent is 0 for this color
+      }
+    }
+  }
+  
+  if(!hasValidOptions){
+    toast("No valid rent to charge!");
+    console.error("No valid rent options despite having colors:", availableColors);
+    G.sel = null;
+    render();
+    return;
+  }
+  
+  h += '<button class="modal-btn" style="background:#555;color:#fff;margin-top:6px" onclick="hideModal();render()">Cancel</button></div>';
+  showModal(h);
+  }catch(e){
+    console.error('playRent error:', e);
+    console.error('Card:', card);
+    console.error('Player properties:', G.players[0].properties);
+    toast('Error playing rent: '+e.message);
+    G.sel=null;
+    render();
+  }
+}
+
+function playDoubleRent(card){
+  if(!G.lastPlayedRent || !G.lastRentAmount){
+    toast("Double the Rent must be played RIGHT AFTER a Rent card!\n\n1. Play Rent card\n2. Play Double the Rent");
+    G.sel = null;
+    render();
+    return;
+  }
+  
+  var p = G.players[0];
+  if(!p || !p.hand || G.sel === null || G.sel === undefined){
+    toast("Invalid game state!");
+    return;
+  }
+  
+  var doubleAmount = G.lastRentAmount; // The additional amount to charge
+  
+  addLog("💰 DOUBLE THE RENT! Original: $"+G.lastRentAmount+"M, Additional: $"+doubleAmount+"M, Total: $"+(G.lastRentAmount+doubleAmount)+"M");
+  
+  var doubleCard = p.hand.splice(G.sel,1)[0];
+  if(doubleCard) G.discard.push(doubleCard);
+  
+  G.playsLeft--;
+  G.sel = null;
+  G.lastPlayedRent = false;
+  
+  // Offer Just Say No opportunity for the double portion only
+  // If they Just Say No, only the double is cancelled, base rent was already paid
+  collectDoubleRentWithJustSayNo(doubleAmount);
+}
+
+function collectDoubleRentWithJustSayNo(doubleAmount){
+  var p = G.players[0];
+  var paidBy = G._lastRentPaidBy || [];
+  
+  // If nobody paid the base rent (all JSN'd), double rent has no targets
+  if(paidBy.length === 0){
+    addLog("Double Rent has no targets - all opponents blocked the base rent!");
+    delete G.lastRentAmount;
+    delete G.lastRentColor;
+    delete G._lastRentWasWild;
+    delete G._lastWildRentTargetId;
+    delete G._lastRentPaidBy;
+    render();
+    return;
+  }
+  
+  // If the original rent was wild rent, charge the SAME player (no re-picking)
+  if(G._lastRentWasWild){
+    var savedTarget = G._lastWildRentTargetId;
+    // Only charge if target actually paid the base rent
+    if(savedTarget && G.players[savedTarget] && paidBy.indexOf(savedTarget) !== -1){
+      chargeDoubleRentTarget(savedTarget, doubleAmount);
+    } else {
+      addLog("Double Rent failed - original target blocked the base rent!");
+      delete G.lastRentAmount;
+      delete G.lastRentColor;
+      delete G._lastRentWasWild;
+      delete G._lastWildRentTargetId;
+      delete G._lastRentPaidBy;
+      render();
+    }
+    return;
+  }
+  
+  // For regular rent, charge ONLY opponents who paid the base rent
+  G._doubleRentCollection = {
+    amount: doubleAmount,
+    paidByIds: paidBy.slice(), // Copy the list of who paid
+    currentIndex: 0,
+    collector: p
+  };
+  
+  collectDoubleRentFromNextPlayer();
+}
+
+function chargeDoubleRentTarget(targetId, amount){
+  hideModal();
+  var p = G.players[0];
+  var target = G.players[targetId];
+  if(!p || !target) return;
+  
+  addLog("Double Rent charged to "+target.name+": $"+amount+"M!");
+  
+  if(!target.isHuman){
+    offerJustSayNoToAI(target,
+      "Double Rent! "+target.name+" owes $"+amount+"M more!",
+      function(){
+        collectPayment(target, p, amount);
+        delete G.lastRentAmount;
+        delete G.lastRentColor;
+        delete G._lastRentWasWild;
+        delete G._lastWildRentTargetId;
+        delete G._lastRentPaidBy;
+        render();
+      },
+      function(){
+        addLog(target.name+" blocked Double Rent with Just Say No!");
+        delete G.lastRentAmount;
+        delete G.lastRentColor;
+        delete G._lastRentWasWild;
+        delete G._lastWildRentTargetId;
+        delete G._lastRentPaidBy;
+        render();
+      }
+    );
+  } else {
+    collectPayment(target, p, amount);
+    delete G.lastRentAmount;
+    delete G.lastRentColor;
+    delete G._lastRentWasWild;
+    delete G._lastWildRentTargetId;
+    delete G._lastRentPaidBy;
+    render();
+  }
+}
+
+function collectDoubleRentFromNextPlayer(){
+  var drc = G._doubleRentCollection;
+  
+  // Iterate through paidByIds list (only opponents who paid base rent)
+  if(drc.currentIndex >= drc.paidByIds.length){
+    delete G._doubleRentCollection;
+    delete G.lastRentAmount;
+    delete G.lastRentColor;
+    delete G._lastRentPaidBy;
+    if(G.playsLeft<=0)endTurn();
+    else render();
+    return;
+  }
+  
+  var targetId = drc.paidByIds[drc.currentIndex];
+  var op = G.players[targetId];
+  
+  if(!op || op.id === drc.collector.id){
+    drc.currentIndex++;
+    collectDoubleRentFromNextPlayer();
+    return;
+  }
+  
+  if(!op.isHuman){
+    // AI opponent - offer JSN before collecting
+    offerJustSayNoToAI(op,
+      drc.collector.name + " doubled the rent! Additional $" + drc.amount + "M!",
+      function(){
+        // AI didn't block
+        autoPayment(op, drc.collector, drc.amount);
+        drc.currentIndex++;
+        collectDoubleRentFromNextPlayer();
+      },
+      function(){
+        // AI used JSN
+        addLog(op.name + " blocked Double Rent with Just Say No!");
+        drc.currentIndex++;
+        collectDoubleRentFromNextPlayer();
+      }
+    );
+  } else {
+    // Human player - offer JSN
+    offerJustSayNo(
+      drc.collector.name + " doubled the rent! Additional $" + drc.amount + "M!",
+      function(){
+        // Human didn't use JSN
+        G._afterPayment = function(){
+          drc.currentIndex++;
+          collectDoubleRentFromNextPlayer();
+        };
+        collectPayment(op, drc.collector, drc.amount);
+      },
+      function(){
+        // Human used JSN
+        addLog("Double Rent cancelled by Just Say No!");
+        drc.currentIndex++;
+        collectDoubleRentFromNextPlayer();
+      }
+    );
+  }
+}
+
+function chargeRent(color){
+  try {
+    hideModal();
+    
+    if(!color || !PS[color]){
+      toast("Invalid color!");
+      return;
+    }
+    
+    var p = G.players[0];
+    if(!p || !p.hand || G.sel === null || G.sel === undefined){
+      toast("No card selected!");
+      return;
+    }
+    
+    var card = p.hand[G.sel];
+    if(!card){
+      toast("Invalid card!");
+      return;
+    }
+    
+    var rent = calculateRent(p, color);
+    
+    if(rent === 0){
+      toast("No rent to charge!");
+      return;
+    }
+    
+    var isWildRent = card.action === 'wildrent';
+    
+    // Remove card from hand and discard it FIRST
+    var cardToDiscard = p.hand.splice(G.sel,1)[0];
+    if(cardToDiscard) G.discard.push(cardToDiscard);
+    G.playsLeft--;
+    G.sel = null;
+    G.lastPlayedRent = true;
+    G.lastRentAmount = rent;
+    G.lastRentColor = color;
+    G._lastRentWasWild = isWildRent;
+    G._lastRentPaidBy = []; // Track who actually paid (for Double Rent targeting)
+    render(); // Show card gone from hand immediately
+    
+    if(isWildRent){
+      // Wild Rent targets ONE player - show target selection
+      setTimeout(function(){
+        showWildRentTarget(rent, color);
+      }, 300);
+    } else {
+      addLog("You charged "+PS[color].name+" rent: $"+rent+"M to all opponents!");
+      addMove("You", "Charged $"+rent+"M "+PS[color].name+" rent (all)", true);
+      
+      // Regular rent charges ALL opponents
+      setTimeout(function(){
+        collectRentFromOpponents(rent);
+      }, 600);
+    }
+  } catch(e) {
+    console.error("Error in chargeRent:", e);
+    toast("Error charging rent!");
+    render();
+  }
+}
+
+function showWildRentTarget(rent, color){
+  var h = '<div class="modal-title">Wild Rent - Choose Target</div>';
+  h += '<div class="modal-text">Charge $'+rent+'M '+PS[color].name+' rent to ONE opponent</div>';
+  h += '<div class="modal-btns">';
+  
+  for(var i=1; i<G.players.length; i++){
+    var op = G.players[i];
+    if(!op) continue;
+    var bv = bankVal(op);
+    h += '<button class="modal-btn" style="background:var(--accent);color:#fff" onclick="chargeWildRentTarget('+i+','+rent+',\''+color+'\')">'+op.name+' ($'+bv+'M in bank)</button>';
+  }
+  
+  h += '</div>';
+  showModal(h);
+}
+
+function chargeWildRentTarget(targetId, rent, color){
+  hideModal();
+  
+  var p = G.players[0];
+  var target = G.players[targetId];
+  if(!p || !target) return;
+  
+  // Save target for Double Rent to use the same target
+  G._lastWildRentTargetId = targetId;
+  
+  addLog("You charged "+target.name+" $"+rent+"M "+PS[color].name+" rent (Wild Rent)!");
+  addMove("You", "Charged "+target.name+" $"+rent+"M "+PS[color].name+" rent", true);
+  
+  // Check if target is AI - offer JSN
+  if(!target.isHuman){
+    offerJustSayNoToAI(target,
+      "You charged "+target.name+" $"+rent+"M rent!",
+      function(){
+        // AI didn't block - track that they paid
+        if(G._lastRentPaidBy) G._lastRentPaidBy.push(target.id);
+        collectPayment(target, p, rent);
+        render();
+      },
+      function(){
+        // AI used JSN - clear rent state so double can't apply
+        addLog(target.name+" blocked the rent with Just Say No!");
+        G.lastPlayedRent = false;
+        render();
+      }
+    );
+  } else {
+    if(G._lastRentPaidBy) G._lastRentPaidBy.push(target.id);
+    collectPayment(target, p, rent);
+    render();
+  }
+}
+
+// SLY DEAL
+function playSlyDeal(card){
+  if(!G.players || !Array.isArray(G.players)){
+    toast("No players available!");
+    return;
+  }
+  
+  var h = '<div class="modal-title">Sly Deal</div><div class="modal-text">Steal a property from an opponent (not from a complete set)</div>';
+  var has = false;
+  
+  for(var i=1; i<G.players.length; i++){
+    var op = G.players[i];
+    if(!op || !op.properties) continue;
+    
+    for(var c in op.properties){
+      if(!op.properties.hasOwnProperty(c)) continue;
+      if(!op.properties[c] || !Array.isArray(op.properties[c])) continue;
+      if(op.properties[c].length === 0) continue;
+      if(!PS[c]) continue;
+      if(isComplete(op,c)) continue;
+      
+      has = true;
+      h += '<button class="modal-btn" style="background:'+PS[c].color+';color:#fff" onclick="doSlyDeal('+i+',\''+c+'\')">'+op.name+"'s "+PS[c].name+'</button>';
+    }
+  }
+  
+  if(!has)h += '<div class="modal-text">No properties available to steal!</div>';
+  h += '<button class="modal-btn" style="background:#555;color:#fff;margin-top:6px" onclick="hideModal();render()">Cancel</button>';
+  showModal(h);
+}
+
+function doSlyDeal(oid, color){
+  try {
+    if(!G.players || !G.players[0] || !G.players[oid]){
+      toast("Invalid players!");
+      hideModal();
+      return;
+    }
+    
+    if(!color || !PS[color]){
+      toast("Invalid color!");
+      hideModal();
+      return;
+    }
+    
+    var p = G.players[0];
+    var op = G.players[oid];
+    
+    // AI is victim - player is using Sly Deal
+    if(oid !== 0){
+      hideModal();
+      
+      if(!p.hand || G.sel === null || G.sel === undefined){
+        toast("No card selected!");
+        return;
+      }
+      
+      // Remove card from hand and discard it FIRST
+      var cardToDiscard = p.hand.splice(G.sel,1)[0];
+      if(cardToDiscard) G.discard.push(cardToDiscard);
+      G.playsLeft--;
+      G.sel = null;
+      render(); // Show card gone from hand immediately
+      
+      // THEN offer JSN to AI before performing the steal
+      setTimeout(function(){
+        offerJustSayNoToAI(op,
+          "You used Sly Deal on "+op.name+"'s "+PS[color].name+"!",
+          function(){
+            // AI didn't block
+            if(op.properties && op.properties[color] && Array.isArray(op.properties[color]) && op.properties[color].length > 0){
+              // Find a property card (not house/hotel) to steal
+              var stolenIdx2 = -1;
+              for(var si2=op.properties[color].length-1; si2>=0; si2--){
+                var sc2 = op.properties[color][si2];
+                if(sc2 && !sc2._house && !sc2._hotel){
+                  stolenIdx2 = si2;
+                  break;
+                }
+              }
+              if(stolenIdx2 !== -1){
+                // Check if set was complete before stealing
+                var wasComplete = isComplete(op, color);
+                var stolen = op.properties[color].splice(stolenIdx2, 1)[0];
+                if(stolen){
+                  if(!p.properties) p.properties = {};
+                  if(!p.properties[color])p.properties[color]=[];
+                  p.properties[color].push(stolen);
+                  addLog("You stole "+stolen.name+" from "+op.name+"!");
+                  addMove("You", "Stole "+stolen.name+" from "+op.name, true);
+                }
+                // Handle orphaned buildings
+                if(wasComplete && !isComplete(op, color) && op.properties[color]){
+                  for(var bi=op.properties[color].length-1; bi>=0; bi--){
+                    var bc = op.properties[color][bi];
+                    if(bc && (bc._house || bc._hotel)){
+                      op.properties[color].splice(bi, 1);
+                      if(!op.bank) op.bank = [];
+                      op.bank.push(bc);
+                      addLog((bc._house ? "House" : "Hotel")+" removed from broken set");
+                    }
+                  }
+                }
+              }
+              if(op.properties[color] && op.properties[color].length === 0)delete op.properties[color];
+            }
+            if(checkWin(p))return;
+            render();
+          },
+          function(){
+            // AI used JSN
+            addLog(op.name+" blocked Sly Deal with Just Say No!");
+            render();
+          }
+        );
+      }, 600);
+    } else {
+      // Player is being stolen from (shouldn't happen in normal gameplay)
+      offerJustSayNo(
+        op.name+" is using Sly Deal to steal your "+PS[color].name+" property!",
+        function(){performSlyDeal(oid, color);},
+        function(){
+          var card = p.hand.splice(G.sel,1)[0];
+          if(card) G.discard.push(card);
+          G.playsLeft--;
+          G.sel = null;
+          if(G.playsLeft<=0)endTurn();
+          else render();
+        }
+      );
+    }
+  } catch(e) {
+    console.error("Error in doSlyDeal:", e);
+    toast("Error performing Sly Deal!");
+    hideModal();
+  }
+}
+
+function performSlyDeal(oid, color){
+  try {
+    if(!G.players || !G.players[0] || !G.players[oid]){
+      console.error("Invalid players in performSlyDeal");
+      return;
+    }
+    
+    var p = G.players[0];
+    var op = G.players[oid];
+    
+    if(!color || !PS[color]){
+      console.error("Invalid color in performSlyDeal");
+      return;
+    }
+    
+    if(op.properties && op.properties[color] && Array.isArray(op.properties[color]) && op.properties[color].length > 0){
+      // Find a property card (not house/hotel) to steal
+      var stolenIdx = -1;
+      for(var si=op.properties[color].length-1; si>=0; si--){
+        var sc = op.properties[color][si];
+        if(sc && !sc._house && !sc._hotel){
+          stolenIdx = si;
+          break;
+        }
+      }
+      
+      if(stolenIdx !== -1){
+        var wasComplete = isComplete(op, color);
+        var stolen = op.properties[color].splice(stolenIdx, 1)[0];
+        if(stolen){
+          if(!p.properties) p.properties = {};
+          if(!p.properties[color])p.properties[color]=[];
+          p.properties[color].push(stolen);
+          addLog("You stole "+stolen.name+" from "+op.name+"!");
+        }
+        // Handle orphaned buildings
+        if(wasComplete && !isComplete(op, color) && op.properties[color]){
+          for(var bi=op.properties[color].length-1; bi>=0; bi--){
+            var bc = op.properties[color][bi];
+            if(bc && (bc._house || bc._hotel)){
+              op.properties[color].splice(bi, 1);
+              if(!op.bank) op.bank = [];
+              op.bank.push(bc);
+              addLog((bc._house ? "House" : "Hotel")+" removed from broken set");
+            }
+          }
+        }
+      }
+      
+      if(op.properties[color].length === 0)delete op.properties[color];
+    }
+    
+    // Discard the Sly Deal card (with null check)
+    if(p.hand && G.sel !== null && G.sel !== undefined){
+      var slyCard = p.hand.splice(G.sel,1)[0];
+      if(slyCard) G.discard.push(slyCard);
+    }
+    
+    G.playsLeft--;
+    G.sel = null;
+    if(checkWin(p))return;
+    if(G.playsLeft<=0)endTurn();
+    else render();
+  } catch(e) {
+    console.error("Error in performSlyDeal:", e);
+    render();
+  }
+}
+
+// FORCED DEAL
+function playForcedDeal(card){
+  try {
+    if(!G.players || !Array.isArray(G.players) || !G.players[0]){
+      toast("Invalid game state!");
+      return;
+    }
+    
+    var p = G.players[0];
+    if(!p.properties){
+      toast("You have no properties!");
+      return;
+    }
+    
+    var h = '<div class="modal-title">Forced Deal</div><div class="modal-text">Swap a property with an opponent (can\'t take from their complete sets)</div>';
+    var has = false;
+    
+    var myProps = [];
+    for(var c in p.properties){
+      if(!p.properties.hasOwnProperty(c)) continue;
+      if(!p.properties[c] || !Array.isArray(p.properties[c])) continue;
+      if(p.properties[c].length === 0) continue;
+      if(!PS[c]) continue;
+      // Player CAN give from own complete sets (rules only restrict TAKING from opponent's complete sets)
+      myProps.push(c);
+    }
+    
+    if(myProps.length === 0){
+      h += '<div class="modal-text">You have no properties to trade!</div>';
+      h += '<button class="modal-btn" style="background:#555;color:#fff;margin-top:6px" onclick="hideModal();render()">Cancel</button>';
+      showModal(h);
+      return;
+    }
+    
+    for(var i=1; i<G.players.length; i++){
+      var op = G.players[i];
+      if(!op || !op.properties) continue;
+      
+      for(var c in op.properties){
+        if(!op.properties.hasOwnProperty(c)) continue;
+        if(!op.properties[c] || !Array.isArray(op.properties[c])) continue;
+        if(op.properties[c].length === 0) continue;
+        if(!PS[c]) continue;
+        if(isComplete(op, c)) continue;
+        
+        has = true;
+        h += '<button class="modal-btn" style="background:'+PS[c].color+';color:#fff" onclick="showForcedDealMine('+i+',\''+c+'\')">'+op.name+"'s "+PS[c].name+'</button>';
+      }
+    }
+    
+    if(!has)h += '<div class="modal-text">No opponent properties available!</div>';
+    h += '<button class="modal-btn" style="background:#555;color:#fff;margin-top:6px" onclick="hideModal();render()">Cancel</button>';
+    showModal(h);
+  } catch(e) {
+    console.error("Error in playForcedDeal:", e);
+    toast("Error showing Forced Deal!");
+  }
+}
+
+function showForcedDealMine(oid, oppColor){
+  try {
+    if(!G.players || !G.players[0] || !G.players[oid]){
+      toast("Invalid player!");
+      hideModal();
+      return;
+    }
+    
+    if(!oppColor || !PS[oppColor]){
+      toast("Invalid color!");
+      hideModal();
+      return;
+    }
+    
+    G._forcedOid = oid;
+    G._forcedOppColor = oppColor;
+    
+    var p = G.players[0];
+    if(!p.properties){
+      toast("You have no properties!");
+      hideModal();
+      return;
+    }
+    
+    var h = '<div class="modal-title">Choose Your Property to Swap</div>';
+    var hasProps = false;
+    
+    for(var c in p.properties){
+      if(!p.properties.hasOwnProperty(c)) continue;
+      if(!p.properties[c] || !Array.isArray(p.properties[c])) continue;
+      if(p.properties[c].length === 0) continue;
+      if(!PS[c]) continue;
+      // Player CAN give from own complete sets (rules only restrict TAKING from opponent complete sets)
+      var isComp = isComplete(p, c);
+      hasProps = true;
+      var warn = isComp ? ' ⚠️ COMPLETE' : '';
+      h += '<button class="modal-btn" style="background:'+PS[c].color+';color:#fff" onclick="doForcedDeal(\''+c+'\')">'+PS[c].name+warn+'</button>';
+    }
+    
+    if(!hasProps){
+      toast("You have no properties to trade!");
+      hideModal();
+      return;
+    }
+    
+    h += '<button class="modal-btn" style="background:#555;color:#fff;margin-top:6px" onclick="hideModal();render()">Cancel</button>';
+    showModal(h);
+  } catch(e) {
+    console.error("Error in showForcedDealMine:", e);
+    toast("Error showing properties!");
+    hideModal();
+  }
+}
+
+function doForcedDeal(myColor){
+  try {
+    if(!myColor || !PS[myColor]){
+      toast("Invalid color!");
+      hideModal();
+      return;
+    }
+    
+    if(G._forcedOid === undefined || !G._forcedOppColor){
+      toast("Invalid swap data!");
+      hideModal();
+      return;
+    }
+    
+    if(!G.players || !G.players[0] || !G.players[G._forcedOid]){
+      toast("Invalid players!");
+      hideModal();
+      delete G._forcedOid;
+      delete G._forcedOppColor;
+      return;
+    }
+    
+    var p = G.players[0];
+    var op = G.players[G._forcedOid];
+    var oppColor = G._forcedOppColor;
+    
+    if(!PS[oppColor]){
+      toast("Invalid opponent color!");
+      hideModal();
+      delete G._forcedOid;
+      delete G._forcedOppColor;
+      return;
+    }
+    
+    if(!p.hand || G.sel === null || G.sel === undefined){
+      toast("No card selected!");
+      hideModal();
+      delete G._forcedOid;
+      delete G._forcedOppColor;
+      return;
+    }
+    
+    hideModal();
+    
+    // Remove card from hand and discard it FIRST
+    var cardToDiscard = p.hand.splice(G.sel,1)[0];
+    if(cardToDiscard) G.discard.push(cardToDiscard);
+    G.playsLeft--;
+    G.sel = null;
+    render(); // Show card gone from hand immediately
+    
+    // Store the swap data for the callback
+    var swapData = {
+      myColor: myColor,
+      oppColor: oppColor,
+      oid: G._forcedOid
+    };
+    
+    delete G._forcedOid;
+    delete G._forcedOppColor;
+    
+    // THEN offer Just Say No to opponent before executing swap
+    setTimeout(function(){
+      // If opponent is human, offer Just Say No
+      if(op.isHuman && op.id === 0){
+        offerJustSayNo(
+          p.name + " wants to swap " + PS[swapData.myColor].name + " for " + PS[swapData.oppColor].name + "!",
+          function(){
+            // Declined Just Say No - execute swap
+            executeForcedDealSwap(p, op, swapData.myColor, swapData.oppColor);
+          },
+          function(){
+            // Used Just Say No - cancel swap
+            addLog("Forced Deal cancelled by Just Say No!");
+            render();
+          }
+        );
+      } else {
+        // AI opponent - offer JSN before executing swap
+        offerJustSayNoToAI(op,
+          "You used Forced Deal on "+op.name+"!",
+          function(){
+            // AI didn't block
+            executeForcedDealSwap(p, op, swapData.myColor, swapData.oppColor);
+          },
+          function(){
+            // AI used JSN
+            addLog(op.name+" blocked Forced Deal with Just Say No!");
+            render();
+          }
+        );
+      }
+    }, 600);
+  } catch(e) {
+    console.error("Error in doForcedDeal:", e);
+    toast("Error performing swap!");
+    hideModal();
+    delete G._forcedOid;
+    delete G._forcedOppColor;
+    render();
+  }
+}
+
+function executeForcedDealSwap(p, op, myColor, oppColor){
+  try {
+    // Validate properties exist
+    if(!p || !op){
+      addLog("Invalid players!");
+      render();
+      return;
+    }
+    
+    if(!p.properties) p.properties = {};
+    if(!op.properties) op.properties = {};
+    
+    if(!p.properties[myColor] || !Array.isArray(p.properties[myColor]) || p.properties[myColor].length === 0){
+      addLog((p.name || "Player")+" has no "+PS[myColor].name+" to swap!");
+      render();
+      return;
+    }
+    
+    if(!op.properties[oppColor] || !Array.isArray(op.properties[oppColor]) || op.properties[oppColor].length === 0){
+      addLog((op.name || "Opponent")+" has no "+PS[oppColor].name+" to swap!");
+      render();
+      return;
+    }
+    
+    // Find property cards to swap (not houses/hotels)
+    var myIdx = -1;
+    for(var fi=p.properties[myColor].length-1; fi>=0; fi--){
+      var fc = p.properties[myColor][fi];
+      if(fc && !fc._house && !fc._hotel){ myIdx = fi; break; }
+    }
+    var theirIdx = -1;
+    for(var fi2=op.properties[oppColor].length-1; fi2>=0; fi2--){
+      var fc2 = op.properties[oppColor][fi2];
+      if(fc2 && !fc2._house && !fc2._hotel){ theirIdx = fi2; break; }
+    }
+    
+    if(myIdx === -1 || theirIdx === -1){
+      addLog("Forced Deal failed - no valid properties to swap!");
+      render();
+      return;
+    }
+    
+    var mine = p.properties[myColor].splice(myIdx, 1)[0];
+    var theirs = op.properties[oppColor].splice(theirIdx, 1)[0];
+    
+    if(!mine || !theirs){
+      addLog("Forced Deal failed - invalid cards!");
+      // Restore if one succeeded
+      if(mine && p.properties[myColor]) p.properties[myColor].push(mine);
+      if(theirs && op.properties[oppColor]) op.properties[oppColor].push(theirs);
+      render();
+      return;
+    }
+    
+    // Execute the swap
+    if(!p.properties[oppColor]) p.properties[oppColor] = [];
+    if(!op.properties[myColor]) op.properties[myColor] = [];
+    
+    p.properties[oppColor].push(theirs);
+    op.properties[myColor].push(mine);
+    
+    addLog((p.name || "Player")+" swapped "+mine.name+" for "+theirs.name+" with "+(op.name || "opponent")+"!");
+    addMove(p.name || "Player", "Swapped "+mine.name+" for "+theirs.name, p.isHuman || false);
+    
+    // Handle orphaned buildings - if either player's set was complete and now isn't
+    var sets = [{player: p, color: myColor}, {player: op, color: oppColor}];
+    for(var si=0; si<sets.length; si++){
+      var sp = sets[si].player;
+      var sc = sets[si].color;
+      if(sp.properties[sc] && !isComplete(sp, sc)){
+        for(var bi=sp.properties[sc].length-1; bi>=0; bi--){
+          var bc = sp.properties[sc][bi];
+          if(bc && (bc._house || bc._hotel)){
+            sp.properties[sc].splice(bi, 1);
+            if(!sp.bank) sp.bank = [];
+            sp.bank.push(bc);
+            addLog((bc._house ? "House" : "Hotel")+" removed from broken "+PS[sc].name+" set");
+          }
+        }
+      }
+    }
+    
+    // Clean up empty sets
+    if(p.properties[myColor] && p.properties[myColor].length === 0) delete p.properties[myColor];
+    if(op.properties[oppColor] && op.properties[oppColor].length === 0) delete op.properties[oppColor];
+    
+    if(checkWin(p)) return;
+    render();
+  } catch(e) {
+    console.error("Error in executeForcedDealSwap:", e);
+    addLog("Error during swap!");
+    render();
+  }
+}
+
+// DEBT COLLECTOR
+function playDebtCollector(card){
+  if(!G.players || !Array.isArray(G.players)){
+    toast("No players available!");
+    return;
+  }
+  
+  var h = '<div class="modal-title">Debt Collector</div><div class="modal-text">Collect $5M from one player</div>';
+  var hasPlayers = false;
+  
+  for(var i=1; i<G.players.length; i++){
+    var op = G.players[i];
+    if(!op) continue;
+    hasPlayers = true;
+    var bankValue = bankVal(op);
+    h += '<button class="modal-btn" style="background:var(--accent);color:#fff" onclick="collectDebt('+i+')">'+op.name+' ($'+bankValue+'M)</button>';
+  }
+  
+  if(!hasPlayers){
+    toast("No opponents available!");
+    return;
+  }
+  
+  h += '<button class="modal-btn" style="background:#555;color:#fff;margin-top:6px" onclick="hideModal();render()">Cancel</button>';
+  showModal(h);
+}
+
+function collectDebt(oid){
+  try {
+    hideModal();
+    
+    if(!G.players || !G.players[0] || !G.players[oid]){
+      toast("Invalid player!");
+      return;
+    }
+    
+    var p = G.players[0];
+    var op = G.players[oid];
+    
+    if(!p.hand || G.sel === null || G.sel === undefined){
+      toast("No card selected!");
+      return;
+    }
+    
+    // Remove card from hand and discard it FIRST
+    var cardToDiscard = p.hand.splice(G.sel,1)[0];
+    if(cardToDiscard) G.discard.push(cardToDiscard);
+    G.playsLeft--;
+    G.sel = null;
+    render(); // Show card gone from hand immediately
+    
+    // THEN offer Just Say No before collecting payment
+    setTimeout(function(){
+      if(op.isHuman && op.id === 0){
+        // Offer Just Say No to human
+        offerJustSayNo(
+          p.name + " is demanding $5M from you!",
+          function(){
+            // Declined Just Say No - must pay
+            collectPayment(op, p, 5);
+          },
+          function(){
+            // Used Just Say No - skip payment
+            addLog("Debt cancelled by Just Say No!");
+            render();
+          }
+        );
+      } else {
+        // AI opponent - offer JSN before collecting
+        offerJustSayNoToAI(op,
+          "You used Debt Collector on "+op.name+"!",
+          function(){
+            // AI didn't block
+            collectPayment(op, p, 5);
+            render();
+          },
+          function(){
+            // AI used JSN
+            addLog(op.name+" blocked Debt Collector with Just Say No!");
+            render();
+          }
+        );
+      }
+    }, 600);
+  } catch(e) {
+    console.error("Error in collectDebt:", e);
+    toast("Error collecting debt!");
+    render();
+  }
+}
+
+// BIRTHDAY
+function playBirthday(card){
+  var p = G.players[0];
+  if(!p || !p.hand || G.sel === null || G.sel === undefined){
+    toast("Invalid game state!");
+    return;
+  }
+  
+  // Remove card from hand and discard it FIRST
+  var cardToDiscard = p.hand.splice(G.sel,1)[0];
+  if(cardToDiscard) G.discard.push(cardToDiscard);
+  
+  G.playsLeft--;
+  G.sel = null;
+  render(); // Show card gone from hand immediately
+  
+  addLog("It's your birthday! Collecting $2M from each opponent...");
+  addMove("You", "Played Birthday ($2M from all)", true);
+  
+  // Collect $2M from ALL AI opponents (with JSN chance)
+  setTimeout(function(){
+    if(!G.players || !Array.isArray(G.players)) return;
+    
+    var aiOpponents = [];
+    for(var i=1; i<G.players.length; i++){
+      var opponent = G.players[i];
+      if(!opponent) continue;
+      if(!opponent.isHuman){
+        aiOpponents.push(opponent);
+      }
+    }
+    
+    collectBirthdayFromAllAI(p, aiOpponents, 0);
+  }, 600);
+}
+
+function collectBirthdayFromAllAI(collector, opponents, index){
+  if(index >= opponents.length){
+    toast("Birthday complete! Check your bank.");
+    render();
+    return;
+  }
+  
+  var op = opponents[index];
+  if(!op){
+    collectBirthdayFromAllAI(collector, opponents, index + 1);
+    return;
+  }
+  
+  offerJustSayNoToAI(op,
+    "It's your birthday! "+op.name+" must pay $2M!",
+    function(){
+      // AI didn't block
+      collectBirthdayFromAI(op, collector, 2);
+      collectBirthdayFromAllAI(collector, opponents, index + 1);
+    },
+    function(){
+      // AI used JSN
+      addLog(op.name+" blocked Birthday with Just Say No!");
+      collectBirthdayFromAllAI(collector, opponents, index + 1);
+    }
+  );
+}
+
+// HOUSE
+function playHouse(card){
+  var h = '<div class="modal-title">Play House</div><div class="modal-text">Add a house to a complete set (no hotel yet, no railroads/utilities)</div>';
+  var has = false;
+  var p = G.players[0];
+  
+  if(!p || !p.properties){
+    toast("No properties available!");
+    return;
+  }
+  
+  for(var c in p.properties){
+    if(!p.properties.hasOwnProperty(c)) continue;
+    if(!p.properties[c] || !Array.isArray(p.properties[c])) continue;
+    if(!isComplete(p,c)) continue;
+    
+    // Can't add house to railroad or utility
+    if(c === 'railroad' || c === 'utility')continue;
+    
+    var hasHotel = false;
+    var hasHouse = false;
+    for(var i=0; i<p.properties[c].length; i++){
+      var propCard = p.properties[c][i];
+      if(!propCard) continue;
+      if(propCard._hotel)hasHotel = true;
+      if(propCard._house)hasHouse = true;
+    }
+    if(!hasHotel && !hasHouse){
+      if(!PS[c]) continue;
+      has = true;
+      h += '<button class="modal-btn" style="background:'+PS[c].color+';color:#fff" onclick="addHouse(\''+c+'\')">'+PS[c].name+'</button>';
+    }
+  }
+  
+  if(!has)h += '<div class="modal-text">No complete sets available for house!</div>';
+  h += '<button class="modal-btn" style="background:#555;color:#fff;margin-top:6px" onclick="hideModal();render()">Cancel</button>';
+  showModal(h);
+}
+
+function addHouse(color){
+  try {
+    hideModal();
+    
+    if(!color || !PS[color]){
+      toast("Invalid color!");
+      return;
+    }
+    
+    var p = G.players[0];
+    if(!p || !p.properties || !p.hand) return;
+    
+    if(G.sel === null || G.sel === undefined || G.sel < 0 || G.sel >= p.hand.length){
+      toast("Invalid card selection!");
+      return;
+    }
+    
+    var card = p.hand[G.sel];
+    if(!card) return;
+    
+    // Remove house card from hand (it becomes part of the property set, NOT discarded!)
+    var houseCard = p.hand.splice(G.sel,1)[0];
+    if(!houseCard) return;
+    
+    // Add house to the property set
+    if(!p.properties[color])p.properties[color]=[];
+    
+    // The house card itself goes onto the set with _house flag
+    houseCard._house = true;
+    p.properties[color].push(houseCard);
+    
+    if(PS[color]){
+      addLog("You added a house to "+PS[color].name+"!");
+    } else {
+      addLog("You added a house!");
+    }
+    
+    G.playsLeft--;
+    G.sel = null;
+    render();
+  } catch(e) {
+    console.error("Error in addHouse:", e);
+    toast("Error adding house!");
+  }
+}
+
+// HOTEL
+function playHotel(card){
+  var h = '<div class="modal-title">Play Hotel</div><div class="modal-text">Add a hotel to a complete set with a house (no railroads/utilities)</div>';
+  var has = false;
+  var p = G.players[0];
+  
+  if(!p || !p.properties){
+    toast("No properties available!");
+    return;
+  }
+  
+  for(var c in p.properties){
+    if(!p.properties.hasOwnProperty(c)) continue;
+    if(!p.properties[c] || !Array.isArray(p.properties[c])) continue;
+    if(!isComplete(p,c)) continue;
+    
+    // Can't add hotel to railroad or utility
+    if(c === 'railroad' || c === 'utility')continue;
+    
+    var hasHouse = false;
+    var hasHotel = false;
+    for(var i=0; i<p.properties[c].length; i++){
+      var propCard = p.properties[c][i];
+      if(!propCard) continue;
+      if(propCard._house)hasHouse = true;
+      if(propCard._hotel)hasHotel = true;
+    }
+    if(hasHouse && !hasHotel){
+      if(!PS[c]) continue;
+      has = true;
+      h += '<button class="modal-btn" style="background:'+PS[c].color+';color:#fff" onclick="addHotel(\''+c+'\')">'+PS[c].name+'</button>';
+    }
+  }
+  
+  if(!has)h += '<div class="modal-text">No sets with houses available!</div>';
+  h += '<button class="modal-btn" style="background:#555;color:#fff;margin-top:6px" onclick="hideModal();render()">Cancel</button>';
+  showModal(h);
+}
+
+function addHotel(color){
+  try {
+    hideModal();
+    
+    if(!color || !PS[color]){
+      toast("Invalid color!");
+      return;
+    }
+    
+    var p = G.players[0];
+    if(!p || !p.properties || !p.hand) return;
+    
+    if(G.sel === null || G.sel === undefined || G.sel < 0 || G.sel >= p.hand.length){
+      toast("Invalid card selection!");
+      return;
+    }
+    
+    var card = p.hand[G.sel];
+    if(!card) return;
+    
+    // Remove hotel card from hand (it becomes part of the property set, NOT discarded!)
+    var hotelCard = p.hand.splice(G.sel,1)[0];
+    if(!hotelCard) return;
+    
+    // Add hotel to the property set
+    if(!p.properties[color])p.properties[color]=[];
+    
+    // The hotel card itself goes onto the set with _hotel flag
+    hotelCard._hotel = true;
+    p.properties[color].push(hotelCard);
+    
+    if(PS[color]){
+      addLog("You added a hotel to "+PS[color].name+"!");
+    } else {
+      addLog("You added a hotel!");
+    }
+    
+    G.playsLeft--;
+    G.sel = null;
+    if(checkWin(p))return;
+    render();
+  } catch(e) {
+    console.error("Error in addHotel:", e);
+    toast("Error adding hotel!");
+  }
+}
+
+// DEAL BREAKER
+function playDealBreaker(card){
+  var h = '<div class="modal-title">Deal Breaker</div><div class="modal-text">Steal a complete set from an opponent!</div>';
+  var has = false;
+  
+  if(!G.players || !Array.isArray(G.players)){
+    toast("No players available!");
+    return;
+  }
+  
+  for(var i=1; i<G.players.length; i++){
+    var op = G.players[i];
+    if(!op || !op.properties) continue;
+    
+    for(var c in op.properties){
+      if(!op.properties.hasOwnProperty(c)) continue;
+      if(!PS[c]) continue;
+      if(isComplete(op,c)){
+        has = true;
+        h += '<button class="modal-btn" style="background:'+PS[c].color+';color:#fff" data-oid="'+i+'" data-col="'+c+'" onclick="doDealBreaker(this)">'+op.name+"'s "+PS[c].name+'</button>';
+      }
+    }
+  }
+  
+  if(!has)h += '<div class="modal-text">No complete sets to steal!</div>';
+  h += '<button class="modal-btn" style="background:#555;color:#fff;margin-top:6px" onclick="hideModal();render()">Cancel</button>';
+  showModal(h);
+}
+
+function doDealBreaker(el){
+  var oid = parseInt(el.getAttribute('data-oid'));
+  var c = el.getAttribute('data-col');
+  var p = G.players[0];
+  var op = G.players[oid];
+  
+  if(!p || !op || !op.properties || !op.properties[c]) {
+    toast("Invalid target!");
+    hideModal();
+    return;
+  }
+  
+  hideModal();
+  
+  // Remove card from hand and discard it FIRST
+  var cardToDiscard = p.hand.splice(G.sel,1)[0];
+  if(cardToDiscard) G.discard.push(cardToDiscard);
+  G.playsLeft--;
+  G.sel = null;
+  render(); // Show card gone from hand immediately
+  
+  // THEN steal the set after a delay
+  setTimeout(function(){
+    if(!op.properties[c] || !Array.isArray(op.properties[c])) return;
+    
+    // Offer JSN to AI before stealing
+    offerJustSayNoToAI(op,
+      "You used Deal Breaker on "+op.name+"'s "+PS[c].name+" set!",
+      function(){
+        // AI didn't block - steal the set
+        var s = op.properties[c].slice();
+        delete op.properties[c];
+        if(!p.properties) p.properties = {};
+        if(!p.properties[c])p.properties[c]=[];
+        for(var i=0; i<s.length; i++){
+          if(s[i]) p.properties[c].push(s[i]);
+        }
+        
+        if(PS[c]){
+          addLog(p.name+" Deal Breaker on "+op.name+"'s "+PS[c].name+"!");
+        } else {
+          addLog(p.name+" Deal Breaker on "+op.name+"!");
+        }
+        if(checkWin(p))return;
+        render();
+      },
+      function(){
+        // AI used JSN
+        addLog(op.name+" blocked Deal Breaker with Just Say No!");
+        render();
+      }
+    );
+  }, 600);
+}
+
+function discardCard(i){
+  if(!G.players || !G.players[0] || !G.players[0].hand) return;
+  if(i < 0 || i >= G.players[0].hand.length) return;
+  
+  var card = G.players[0].hand.splice(i,1)[0];
+  if(card) G.discard.push(card);
+  
+  if(G.players[0].hand.length<=7)endTurn();
+  else render();
+}
+
+function showRearrangeWilds(){
+  try {
+    var p = G.players[0];
+    if(!p || !p.properties){
+      toast("No properties available!");
+      return;
+    }
+    
+    var wilds = [];
+    
+    // Find all wild cards in player's properties
+    for(var c in p.properties){
+      if(!p.properties.hasOwnProperty(c))continue;
+      if(!p.properties[c] || !Array.isArray(p.properties[c])) continue;
+      
+      for(var i=0; i<p.properties[c].length; i++){
+        var card = p.properties[c][i];
+        if(!card) continue;
+        if(card.type === 'property' && card.colors && Array.isArray(card.colors) && card.colors.length > 1){
+          wilds.push({card: card, currentColor: c, index: i});
+        }
+      }
+    }
+    
+    if(wilds.length === 0){
+      toast("No wild cards to rearrange!");
+      return;
+    }
+    
+    var h = '<div class="modal-title">Rearrange Wild Cards</div><div class="modal-text">Move wild cards between sets (doesn\'t count as a play)</div>';
+    
+    for(var j=0; j<wilds.length; j++){
+      var w = wilds[j];
+      if(!w || !w.card || !w.currentColor || !PS[w.currentColor]) continue;
+      
+      h += '<div style="margin:8px 0;padding:8px;background:var(--bg);border-radius:6px">';
+      h += '<div style="font-size:0.7rem;margin-bottom:4px;color:var(--text-dim)">'+w.card.name+' (currently in '+PS[w.currentColor].name+')</div>';
+      h += '<div style="display:flex;gap:4px;flex-wrap:wrap">';
+      
+      for(var k=0; k<w.card.colors.length; k++){
+        var col = w.card.colors[k];
+        if(!col || !PS[col]) continue;
+        
+        var isCurrent = col === w.currentColor;
+        h += '<button class="modal-btn" style="background:'+PS[col].color+';color:#fff'+(isCurrent?';opacity:0.5':'')+'" '+(isCurrent?'disabled':'')+' onclick="moveWild('+j+',\''+col+'\')">'+PS[col].name+'</button>';
+      }
+      
+      h += '</div></div>';
+    }
+    
+    h += '<button class="modal-btn" style="background:var(--accent);color:#fff;width:100%;margin-top:6px" onclick="delete G._rearrangeWilds;hideModal();render()">Done</button>';
+    
+    G._rearrangeWilds = wilds;
+    showModal(h);
+  } catch(e) {
+    console.error("Error in showRearrangeWilds:", e);
+    toast("Error showing wild cards!");
+  }
+}
+
+function moveWild(wildIndex, newColor){
+  try {
+    if(!G._rearrangeWilds || wildIndex === undefined || !newColor){
+      toast("Invalid parameters!");
+      return;
+    }
+    
+    if(wildIndex < 0 || wildIndex >= G._rearrangeWilds.length){
+      toast("Invalid wild card index!");
+      return;
+    }
+    
+    if(!PS[newColor]){
+      toast("Invalid color!");
+      return;
+    }
+    
+    var p = G.players[0];
+    if(!p || !p.properties){
+      toast("No properties!");
+      return;
+    }
+    
+    var w = G._rearrangeWilds[wildIndex];
+    if(!w || !w.card){
+      toast("Invalid wild card!");
+      return;
+    }
+    
+    var card = w.card;
+    var oldColor = w.currentColor;
+    
+    if(!PS[oldColor]){
+      toast("Invalid old color!");
+      return;
+    }
+    
+    // Validate newColor is in card's colors
+    if(!card.colors || !card.colors.includes(newColor)){
+      toast("Cannot move to "+PS[newColor].name+"!");
+      return;
+    }
+    
+    // Remove from old set
+    if(p.properties[oldColor] && Array.isArray(p.properties[oldColor])){
+      var idx = p.properties[oldColor].indexOf(card);
+      if(idx !== -1){
+        // Check if set was complete and had house/hotel before removal
+        var wasComplete = isComplete(p, oldColor);
+        
+        p.properties[oldColor].splice(idx, 1);
+        
+        // If set was complete and now isn't, remove house/hotel to bank
+        if(wasComplete && !isComplete(p, oldColor)){
+          var housesToRemove = [];
+          var hotelsToRemove = [];
+          for(var bi=0; bi<(p.properties[oldColor]||[]).length; bi++){
+            var bCard = p.properties[oldColor][bi];
+            if(!bCard) continue;
+            if(bCard._house) housesToRemove.push(bi);
+            if(bCard._hotel) hotelsToRemove.push(bi);
+          }
+          // Remove in reverse order
+          var toRemove = housesToRemove.concat(hotelsToRemove).sort(function(a,b){return b-a;});
+          for(var ri=0; ri<toRemove.length; ri++){
+            var removed = p.properties[oldColor].splice(toRemove[ri], 1)[0];
+            if(removed){
+              p.bank.push(removed);
+              addLog((removed._house ? "House" : "Hotel") + " moved to bank ($"+(removed.value||0)+"M)");
+            }
+          }
+        }
+        
+        if(p.properties[oldColor].length === 0) delete p.properties[oldColor];
+      }
+    }
+    
+    // Add to new set
+    card._chosenColor = newColor;
+    if(!p.properties[newColor])p.properties[newColor] = [];
+    p.properties[newColor].push(card);
+    
+    addLog("Moved "+card.name+" from "+PS[oldColor].name+" to "+PS[newColor].name);
+    
+    // Refresh the modal
+    hideModal();
+    setTimeout(function(){showRearrangeWilds();}, 100);
+  } catch(e) {
+    console.error("Error in moveWild:", e);
+    toast("Error moving wild card!");
+    hideModal();
+  }
+}
+
+function addLog(m){
+  if(!G)return;
+  G.log.push(m);
+  if(G.log.length>50)G.log.shift();
+}
+
+function addMove(playerName, action, isHuman){
+  if(!G || !G.moveHistory) return;
+  
+  G.moveHistory.push({
+    player: playerName,
+    action: action,
+    isHuman: isHuman
+  });
+  
+  // Keep only last 5 moves
+  if(G.moveHistory.length > 5){
+    G.moveHistory.shift();
+  }
+  
+  // No need to call render - it will be shown next time renderBoard is called
+}
+
+function toggleLog(){
+  document.getElementById('log-area').classList.toggle('visible');
+  renderLog();
+}
+
+function renderLog(){
+  var e = document.getElementById('log-area');
+  var h = '';
+  for(var i=0; i<G.log.length; i++)h += '<div class="log-entry">'+G.log[i]+'</div>';
+  e.innerHTML = h;
+  e.scrollTop = e.scrollHeight;
+}
+
+function toast(m){
+  var t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = m;
+  document.body.appendChild(t);
+  setTimeout(function(){t.remove();}, 2500);
+}
+
+// RENDER
+function render(){
+  if(!G)return;
+  renderTopBar();
+  renderOpponents();
+  renderBoard();
+  renderHand();
+  renderActions();
+  renderLog();
+}
+
+function renderTopBar(){
+  var deckCount = document.getElementById('deck-count');
+  var turnInd = document.getElementById('turn-indicator');
+  var playsLeft = document.getElementById('plays-left');
+  if(!deckCount || !turnInd || !playsLeft) return;
+  
+  deckCount.textContent = 'Deck: '+G.deck.length;
+  var cp = G.players[G.currentPlayer];
+  turnInd.textContent = cp.isHuman ? 'Your Turn' : cp.name+"'s Turn";
+  turnInd.style.color = cp.isHuman ? 'var(--green)' : 'var(--text-dim)';
+  
+  var humanSets = countComplete(G.players[0]);
+  var playsText = 'Plays: '+G.playsLeft+' | Sets: '+humanSets+'/3';
+  if(G.players[0]._hasWon)playsText += ' ✓WIN';
+  
+  playsLeft.textContent = playsText;
+}
+
+function renderOpponents(){
+  var a = document.getElementById('opponents-area');
+  if(!a) return;
+  a.innerHTML = '';
+  for(var i=0; i<G.players.length; i++){
+    var p = G.players[i];
+    if(p.id===0)continue;
+    var d = document.createElement('div');
+    d.className = 'opponent-panel'+(G.currentPlayer===p.id?' current-turn':'');
+    d.setAttribute('data-pid', p.id);
+    d.onclick = function(){showOppDetail(G.players[parseInt(this.getAttribute('data-pid'))]);};
+    var sh = '';
+    for(var c in p.properties){
+      if(!p.properties.hasOwnProperty(c))continue;
+      var comp = isComplete(p,c);
+      sh += '<div class="opp-set-dot'+(comp?' complete':'')+'" style="background:'+PS[c].color+'"></div>';
+    }
+    d.innerHTML = '<div class="opp-name">'+p.name+' <span class="opp-diff">'+p.difficulty+'</span></div><div class="opp-stats"><span>Cards:'+p.hand.length+'</span><span>$'+bankVal(p)+'M</span><span>'+countComplete(p)+'/3</span></div><div class="opp-sets">'+sh+'</div>';
+    a.appendChild(d);
+  }
+}
+
+function showOppDetail(p){
+  var h = '<div class="modal-title">'+p.name+' <span class="opp-diff">'+p.difficulty+'</span></div>';
+  h += '<div class="modal-text">Cards:'+p.hand.length+' | Bank:$'+bankVal(p)+'M | Sets:'+countComplete(p)+'/3</div>';
+  h += '<div class="board-section-title">Properties</div><div class="opp-detail-sets">';
+  for(var c in p.properties){
+    if(!p.properties.hasOwnProperty(c))continue;
+    var cards = p.properties[c];
+    var comp = isComplete(p,c);
+    h += '<div><div style="font-size:0.6rem;font-weight:700;color:'+PS[c].color+';margin-bottom:2px">'+PS[c].name+(comp?' ✓':' ('+cards.length+'/'+PS[c].size+')')+'</div><div class="opp-detail-set-row">';
+    for(var i=0; i<cards.length; i++)h += cardHTML(cards[i]);
+    h += '</div></div>';
+  }
+  h += '</div><div class="board-section-title">Bank</div><div class="opp-detail-bank">';
+  for(var j=0; j<p.bank.length; j++)h += cardHTML(p.bank[j]);
+  if(!p.bank.length)h += '<span style="font-size:0.7rem;color:var(--text-dim)">Empty</span>';
+  h += '</div><button class="modal-btn" style="background:var(--accent);color:#fff;width:100%" onclick="hideModal()">Close</button>';
+  showModal(h);
+}
+
+function renderBoard(){
+  var b = document.getElementById('player-board');
+  if(!b) return;
+  var p = G.players[0];
+  var h = '<div class="board-section-title">Your Properties ('+countComplete(p)+'/3 complete)</div><div class="property-sets">';
+  for(var c in p.properties){
+    if(!p.properties.hasOwnProperty(c))continue;
+    var cards = p.properties[c];
+    var comp = isComplete(p,c);
+    var hasH = false, hasHt = false;
+    var propCount = 0;
+    for(var k=0; k<cards.length; k++){
+      if(cards[k]._house)hasH = true;
+      else if(cards[k]._hotel)hasHt = true;
+      else propCount++;
+    }
+    
+    var setLabel = PS[c].name;
+    if(comp){
+      setLabel = '✓ '+setLabel;
+    } else {
+      setLabel = setLabel + ' ('+propCount+'/'+PS[c].size+')';
+    }
+    
+    h += '<div class="property-set" data-color="'+c+'"><div class="set-label" style="color:'+PS[c].color+'">'+setLabel+(hasH?' 🏠':'')+(hasHt?' 🏨':'')+'</div>';
+    for(var i=0; i<cards.length; i++)h += '<div class="'+(i>0?'card-stacked':'')+'">'+cardHTML(cards[i])+'</div>';
+    h += '</div>';
+  }
+  if(!Object.keys(p.properties).length)h += '<span style="font-size:0.7rem;color:var(--text-dim)">No properties yet</span>';
+  h += '</div><div class="board-section-title">Your Bank ($'+bankVal(p)+'M)</div><div class="bank-area">';
+  for(var j=0; j<p.bank.length; j++)h += cardHTML(p.bank[j]);
+  if(!p.bank.length)h += '<span style="font-size:0.7rem;color:var(--text-dim)">Empty</span>';
+  h += '</div>';
+  
+  // Add move history below bank
+  h += '<div class="board-section-title" style="margin-top:8px">Recent Moves</div>';
+  h += '<div class="move-history-inline">';
+  if(!G.moveHistory || G.moveHistory.length === 0){
+    h += '<div style="text-align:center;color:var(--text-dim);font-size:0.6rem;padding:4px">No moves yet</div>';
+  } else {
+    for(var m=0; m<G.moveHistory.length; m++){
+      var move = G.moveHistory[m];
+      var cls = move.isHuman ? 'player' : 'ai';
+      h += '<div class="move-entry-inline '+cls+'"><strong>'+move.player+':</strong> '+move.action+'</div>';
+    }
+  }
+  h += '</div>';
+  
+  b.innerHTML = h;
+  
+  // Bind long-press to show rent preview on each property set
+  var sets = b.querySelectorAll('.property-set[data-color]');
+  for(var si=0; si<sets.length; si++){
+    (function(el){
+      var timer = null;
+      var startHandler = function(e){
+        timer = setTimeout(function(){
+          showRentPreview(el.getAttribute('data-color'));
+        }, 400);
+      };
+      var endHandler = function(){
+        if(timer) clearTimeout(timer);
+        timer = null;
+      };
+      el.addEventListener('touchstart', startHandler, {passive: true});
+      el.addEventListener('mousedown', startHandler);
+      el.addEventListener('touchend', endHandler);
+      el.addEventListener('touchmove', endHandler);
+      el.addEventListener('mouseup', endHandler);
+      el.addEventListener('mouseleave', endHandler);
+    })(sets[si]);
+  }
+}
+
+function showRentPreview(color){
+  if(!color || !PS[color]) return;
+  var p = G.players[0];
+  if(!p || !p.properties || !p.properties[color]) return;
+  
+  var cards = p.properties[color];
+  var propCount = 0;
+  var hasHouse = false;
+  var hasHotel = false;
+  for(var i=0; i<cards.length; i++){
+    var c = cards[i];
+    if(!c) continue;
+    if(c._house) hasHouse = true;
+    else if(c._hotel) hasHotel = true;
+    else propCount++;
+  }
+  
+  var rv = RENT_VALUES[color];
+  if(!rv) return;
+  
+  var h = '<div class="modal-title" style="color:'+PS[color].color+'">'+PS[color].name+' Rent</div>';
+  h += '<div style="text-align:left;padding:8px 4px">';
+  
+  // Show rent ladder
+  h += '<div style="font-size:0.75rem;margin-bottom:8px;font-weight:600">Rent by # of cards:</div>';
+  for(var r=0; r<rv.length; r++){
+    var active = propCount >= (r+1);
+    h += '<div style="display:flex;justify-content:space-between;padding:3px 8px;font-size:0.75rem;border-radius:4px;margin:2px 0;'+(active ? 'background:'+PS[color].color+'22;color:'+PS[color].color+';font-weight:700' : 'color:var(--text-dim)')+'"><span>'+(r+1)+' card'+(r>0?'s':'')+'</span><span>$'+rv[r]+'M</span></div>';
+  }
+  
+  // Current rent
+  var baseRent = propCount > 0 ? rv[Math.min(propCount, rv.length)-1] : 0;
+  var total = baseRent;
+  
+  h += '<div style="border-top:1px solid var(--border);margin:8px 0 4px;padding-top:8px;font-size:0.75rem">';
+  h += '<div style="display:flex;justify-content:space-between;padding:2px 8px"><span>Base rent ('+propCount+' cards)</span><strong>$'+baseRent+'M</strong></div>';
+  
+  if(color !== 'railroad' && color !== 'utility'){
+    if(hasHouse){ total += 3; h += '<div style="display:flex;justify-content:space-between;padding:2px 8px;color:#2a7;"><span>🏠 House bonus</span><strong>+$3M</strong></div>'; }
+    if(hasHotel){ total += 4; h += '<div style="display:flex;justify-content:space-between;padding:2px 8px;color:#c70;"><span>🏨 Hotel bonus</span><strong>+$4M</strong></div>'; }
+  }
+  
+  h += '<div style="display:flex;justify-content:space-between;padding:4px 8px;margin-top:4px;border-top:1px solid var(--border);font-size:0.85rem;font-weight:700"><span>Total rent</span><span style="color:'+PS[color].color+'">$'+total+'M</span></div>';
+  h += '</div></div>';
+  
+  h += '<button class="modal-btn" style="background:var(--accent);color:#fff;width:100%;margin-top:4px" onclick="hideModal()">Close</button>';
+  showModal(h);
+}
+
+function renderHand(){
+  var ct = document.getElementById('hand-cards');
+  var hc = document.getElementById('hand-count');
+  if(!ct || !hc) return;
+  var p = G.players[0];
+  ct.innerHTML = '';
+  
+  if(G.phase === 'discard'){
+    hc.textContent = p.hand.length+' cards - DISCARD to 7!';
+    for(var i=0; i<p.hand.length; i++){
+      var d = document.createElement('div');
+      d.innerHTML = cardHTML(p.hand[i]);
+      var el = d.firstChild;
+      el.setAttribute('data-idx', i);
+      el.onclick = function(){discardCard(parseInt(this.getAttribute('data-idx')));};
+      ct.appendChild(el);
+    }
+    return;
+  }
+  
+  hc.textContent = p.hand.length+' cards';
+  for(var j=0; j<p.hand.length; j++){
+    var d2 = document.createElement('div');
+    var sel = G.sel === j;
+    d2.innerHTML = cardHTML(p.hand[j], sel);
+    var el2 = d2.firstChild;
+    el2.setAttribute('data-idx', j);
+    el2.onclick = function(){selectCard(parseInt(this.getAttribute('data-idx')));};
+    
+    // Add touch events for tooltip (press and hold)
+    el2.onmousedown = function(){
+      var idx = parseInt(this.getAttribute('data-idx'));
+      startTooltipTimer(idx);
+    };
+    el2.onmouseup = cancelTooltipTimer;
+    el2.onmouseleave = cancelTooltipTimer;
+    el2.ontouchstart = function(e){
+      var idx = parseInt(this.getAttribute('data-idx'));
+      startTooltipTimer(idx);
+    };
+    el2.ontouchend = cancelTooltipTimer;
+    el2.ontouchcancel = cancelTooltipTimer;
+    
+    ct.appendChild(el2);
+  }
+}
+
+function renderActions(){
+  var bar = document.getElementById('action-bar');
+  if(!bar) return;
+  var isMyTurn = G.currentPlayer === 0 && G.phase === 'play';
+  var hasSel = G.sel !== null;
+  
+  if(G.phase === 'discard'){
+    bar.innerHTML = '<span style="font-size:0.75rem;color:var(--accent);font-weight:700">Tap cards to discard down to 7</span>';
+    return;
+  }
+  
+  if(!isMyTurn){
+    bar.innerHTML = '<span style="font-size:0.75rem;color:var(--text-dim)">Waiting...</span>';
+    return;
+  }
+  
+  var h = '';
+  if(hasSel){
+    var card = G.players[0].hand[G.sel];
+    var canPlay = card.type !== 'money';
+    
+    // Special check for Double Rent
+    if(card.action === 'double' && !G.lastPlayedRent){
+      canPlay = false;
+    }
+    
+    var playLabel = '▶ Play';
+    if(card.action === 'double'){
+      if(G.lastPlayedRent && G.lastRentAmount){
+        playLabel = '▶ Double! ($'+G.lastRentAmount+'M → $'+(G.lastRentAmount*2)+'M)';
+      } else {
+        playLabel = '✗ Need Rent First';
+      }
+    }
+    
+    var canUsePlay = canPlay && G.playsLeft > 0;
+    var canUseBank = G.playsLeft > 0 && card.type !== 'property'; // Property cards cannot be banked
+    var bankLabel = card.type === 'property' ? 'Can\'t Bank Properties' : 'Bank ($'+(card.value||0)+'M)';
+    
+    h += '<button class="action-btn btn-play"'+(canUsePlay?'':' disabled')+' onclick="playSelected()">'+playLabel+'</button>';
+    h += '<button class="action-btn btn-bank"'+(canUseBank?'':' disabled')+' onclick="bankSelected()">'+bankLabel+'</button>';
+    h += '<button class="action-btn btn-cancel" onclick="G.sel=null;render()">✕</button>';
+  } else {
+    // Show rearrange button when no card selected
+    h += '<button class="action-btn" style="background:var(--gold);color:#1a1a2e" onclick="showRearrangeWilds()">Rearrange Wilds</button>';
+  }
+  h += '<button class="action-btn btn-end" onclick="endTurn()">End Turn</button>';
+  bar.innerHTML = h;
+}
+
+function imgKey(card){
+  return null; // No images for now
+}
+
+function cardHTML(card, selected){
+  var cls = selected ? ' selected' : '';
+  var html = '';
+  
+  // MONEY CARDS
+  if(card.type === 'money'){
+    html = '<div class="card card-money'+cls+'">';
+    html += '<div class="card-value-corner">$'+card.value+'M</div>';
+    html += '<div class="card-center-text">$'+card.value+'M</div>';
+    html += '</div>';
+    return html;
+  }
+  
+  // PROPERTY CARDS
+  if(card.type === 'property'){
+    var isWild = card.colors && card.colors.length > 1;
+    var isMultiWild = card.colors && card.colors.length >= 10;
+    var chosenColor = card._chosenColor;
+    
+    html = '<div class="card card-property'+cls+'">';
+    html += '<div class="card-value-corner" style="background:#000;color:#fff">$'+card.value+'M</div>';
+    
+    // Color bar at top
+    if(isMultiWild){
+      html += '<div class="card-color-bar card-color-bar-multi">ALL COLORS</div>';
+    } else if(isWild && !chosenColor){
+      // Two-color wild not yet played
+      html += '<div class="card-color-bar card-color-bar-wild" style="background:linear-gradient(90deg,'+PS[card.colors[0]].color+' 0%,'+PS[card.colors[0]].color+' 50%,'+PS[card.colors[1]].color+' 50%,'+PS[card.colors[1]].color+' 100%)">WILD</div>';
+    } else {
+      // Single color or wild that's been played
+      var displayColor = chosenColor || card.colors[0];
+      var colorData = PS[displayColor];
+      var textColor = (displayColor === 'yellow') ? '#000' : '#fff';
+      html += '<div class="card-color-bar" style="background:'+colorData.color+';color:'+textColor+'">'+colorData.name.toUpperCase()+'</div>';
+    }
+    
+    // Property name
+    html += '<div class="card-property-name">'+card.name+'</div>';
+    
+    // Rent values (if not a house/hotel)
+    if(!card._house && !card._hotel){
+      var displayColor = chosenColor || card.colors[0];
+      if(RENT_VALUES[displayColor]){
+        var rentVals = RENT_VALUES[displayColor];
+        html += '<div class="card-rent-box">Rent: ';
+        for(var i=0; i<rentVals.length; i++){
+          html += '$'+rentVals[i]+'M';
+          if(i < rentVals.length-1)html += ' / ';
+        }
+        html += '</div>';
+      }
+    }
+    
+    html += '</div>';
+    return html;
+  }
+  
+  // ACTION CARDS
+  if(card.type === 'action'){
+    var actionColor = 'var(--red)';
+    if(card.action === 'passgo')actionColor = 'var(--green)';
+    if(card.action === 'justno')actionColor = '#000';
+    if(card.action === 'house')actionColor = 'var(--green)';
+    if(card.action === 'hotel')actionColor = 'var(--red)';
+    
+    html = '<div class="card card-action'+cls+'" style="background:linear-gradient(135deg,'+actionColor+' 0%,'+actionColor+' 100%)">';
+    html += '<div class="card-value-corner" style="background:#fff;color:'+actionColor+'">$'+card.value+'M</div>';
+    html += '<div class="card-action-title">'+card.name.toUpperCase()+'</div>';
+    
+    // Action description
+    var desc = '';
+    if(card.action === 'dealbreaker')desc = 'Steal a complete set from any player!';
+    else if(card.action === 'sly')desc = 'Steal a property (not from complete sets)';
+    else if(card.action === 'forced')desc = 'Swap properties with any player';
+    else if(card.action === 'debt')desc = 'Force player to pay you $5M';
+    else if(card.action === 'birthday')desc = 'All players pay you $2M';
+    else if(card.action === 'justno')desc = 'Cancel any action against you!';
+    else if(card.action === 'double')desc = 'Play AFTER rent to double it!';
+    else if(card.action === 'passgo')desc = 'Draw 2 cards immediately';
+    else if(card.action === 'house')desc = '🏠<br>Add to complete set<br>+$3M rent';
+    else if(card.action === 'hotel')desc = '🏨<br>Add to set with house<br>+$4M rent';
+    else if(card.action === 'rent')desc = 'Charge rent!';
+    else if(card.action === 'wildrent')desc = 'Charge rent on ANY color!';
+    
+    html += '<div class="card-action-desc">'+desc+'</div>';
+    html += '</div>';
+    return html;
+  }
+  
+  // Fallback
+  return '<div class="card card-fallback'+cls+'"><span class="card-name-badge">'+card.name+'</span>'+(card.value?'<span class="card-value-badge">$'+card.value+'M</span>':'')+'</div>';
+}
+</script>
+</body>
+</html>
